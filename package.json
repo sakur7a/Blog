@@ -6,7 +6,8 @@
     "dev": "bundle exec jekyll serve --livereload --host 127.0.0.1",
     "build": "bundle exec jekyll build",
     "clean": "bundle exec jekyll clean",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "post:publish": "powershell -ExecutionPolicy Bypass -File scripts/publish-obsidian-post.ps1"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1"

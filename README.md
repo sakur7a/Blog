@@ -18,6 +18,7 @@ npm run dev
 ```bash
 npm run build
 npm run clean
+npm run test:e2e
 ```
 
 ## 常用修改
@@ -33,3 +34,15 @@ npm run clean
 ## 部署
 
 仓库包含 GitHub Pages 工作流：`.github/workflows/pages.yml`。推送到 `sakur7a/Blog` 后，在仓库设置里启用 Pages 的 GitHub Actions 来源即可自动构建发布。
+
+## Obsidian 发文
+
+把 `D:\MyBlog\obsidian` 作为 Obsidian vault 打开。平时在 `obsidian/Drafts` 写草稿，图片放 `obsidian/Attachments`。
+
+发布一篇文章：
+
+```powershell
+npm run post:publish -- "obsidian/Drafts/文章标题.md"
+```
+
+脚本会生成 Jekyll 文章、复制图片、构建、测试、提交并推送。推送后 GitHub Pages 会自动部署。

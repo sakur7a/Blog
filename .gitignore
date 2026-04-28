@@ -7,5 +7,9 @@ node_modules/
 screenshots/
 test-results/
 playwright-report/
+.obsidian/
+obsidian/Drafts/
+obsidian/Templates/
+obsidian/Attachments/
 .DS_Store
 Thumbs.db
