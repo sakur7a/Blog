@@ -1,0 +1,14 @@
+{
+  "name": "myblog",
+  "private": true,
+  "scripts": {
+    "install:ruby": "bundle install",
+    "dev": "bundle exec jekyll serve --livereload --host 127.0.0.1",
+    "build": "bundle exec jekyll build",
+    "clean": "bundle exec jekyll clean",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}

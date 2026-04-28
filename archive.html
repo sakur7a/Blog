@@ -1,0 +1,14 @@
+---
+layout: page
+title: Archive
+hide_home_active: true
+---
+
+<section class="archive-list" aria-label="文章归档">
+  {% for post in site.posts %}
+  <a class="archive-row" href="{{ post.url | relative_url }}">
+    <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y-%m-%d" }}</time>
+    <span>{{ post.title }}</span>
+  </a>
+  {% endfor %}
+</section>

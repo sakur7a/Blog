@@ -1,0 +1,52 @@
+title: Sakura
+description: "记录技术、生活和一些长期有效的小想法"
+url: "https://sakur7a.github.io"
+baseurl: "/Blog"
+lang: zh-CN
+timezone: Asia/Shanghai
+encoding: utf-8
+
+author:
+  name: "Your Name"
+  email: "sakur7a@outlook.com"
+  github: "sakur7a"
+
+github: "sakur7a"
+
+menu:
+  - title: "Archive"
+    url: "/archive.html"
+  - title: "About"
+    url: "/about.html"
+  - title: "GitHub"
+    url: "https://github.com/sakur7a"
+
+markdown: kramdown
+highlighter: rouge
+permalink: /:year-:month-:day/:title.html
+future: true
+
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+social:
+  name: "Sakura"
+  links:
+    - "https://github.com/sakur7a"
+
+sass:
+  style: compressed
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: page

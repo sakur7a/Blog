@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="{{ site.lang | default: 'zh-CN' }}">
+  {% include head.html %}
+  <body id="{{ page.body_id | default: page.layout }}">
+    {% include header.html %}
+    <main id="main" role="main">
+      {{ content }}
+    </main>
+    {% include search.html %}
+    {% include footer.html %}
+    <script src="{{ '/assets/js/site.js' | relative_url }}"></script>
+  </body>
+</html>

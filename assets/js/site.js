@@ -1,0 +1,142 @@
+(function () {
+  var canvas = document.getElementById("J_firework_canvas");
+  if (!canvas) return;
+
+  var ctx = canvas.getContext("2d");
+  var particles = [];
+  var colors = ["#6ee7b7", "#93c5fd", "#fde68a", "#fca5a5"];
+
+  function resize() {
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(1, Math.floor(rect.width * window.devicePixelRatio));
+    canvas.height = Math.max(1, Math.floor(rect.height * window.devicePixelRatio));
+    ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+  }
+
+  function spawn() {
+    var rect = canvas.getBoundingClientRect();
+    var x = Math.random() * rect.width;
+    var y = 40 + Math.random() * (rect.height - 80);
+    for (var i = 0; i < 18; i += 1) {
+      particles.push({
+        x: x,
+        y: y,
+        vx: Math.cos((Math.PI * 2 * i) / 18) * (0.7 + Math.random() * 1.6),
+        vy: Math.sin((Math.PI * 2 * i) / 18) * (0.7 + Math.random() * 1.6),
+        life: 42,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      });
+    }
+  }
+
+  function tick() {
+    var rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    if (Math.random() < 0.018) spawn();
+
+    particles = particles.filter(function (p) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.018;
+      p.life -= 1;
+      ctx.globalAlpha = Math.max(0, p.life / 42);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      return p.life > 0;
+    });
+
+    ctx.globalAlpha = 1;
+    window.requestAnimationFrame(tick);
+  }
+
+  resize();
+  window.addEventListener("resize", resize);
+  window.requestAnimationFrame(tick);
+})();
+
+(function () {
+  var open = document.getElementById("J_search_open");
+  var close = document.getElementById("J_search_close");
+  var panel = document.getElementById("J_search_panel");
+  var input = document.getElementById("J_search_input");
+  var results = document.getElementById("J_search_results");
+  var index = null;
+
+  if (!open || !close || !panel || !input || !results) return;
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, function (char) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char];
+    });
+  }
+
+  function render(items) {
+    if (!items.length) {
+      results.innerHTML = '<p class="search-empty">没有找到匹配文章</p>';
+      return;
+    }
+
+    results.innerHTML = items.map(function (item) {
+      return '<a class="search-result" href="' + item.url + '">' +
+        "<strong>" + escapeHtml(item.title) + "</strong>" +
+        "<span>【" + escapeHtml(item.date) + "】" + escapeHtml(item.summary) + "</span>" +
+        "</a>";
+    }).join("");
+  }
+
+  function search() {
+    var query = input.value.trim().toLowerCase();
+    if (!query) {
+      render(index || []);
+      return;
+    }
+
+    render((index || []).filter(function (item) {
+      return (item.title + " " + item.summary).toLowerCase().indexOf(query) !== -1;
+    }));
+  }
+
+  function show() {
+    panel.hidden = false;
+    document.body.style.overflow = "hidden";
+    if (!index) {
+      fetch(open.getAttribute("data-search-url") || "/search.json")
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+          index = data;
+          render(index);
+        });
+    } else {
+      render(index);
+    }
+    window.setTimeout(function () { input.focus(); }, 20);
+  }
+
+  function hide() {
+    panel.hidden = true;
+    document.body.style.overflow = "";
+    input.value = "";
+  }
+
+  open.addEventListener("click", show);
+  close.addEventListener("click", hide);
+  input.addEventListener("input", search);
+  panel.addEventListener("click", function (event) {
+    if (event.target === panel) hide();
+  });
+  window.addEventListener("keydown", function (event) {
+    if (event.key === "/" && panel.hidden) {
+      event.preventDefault();
+      show();
+    }
+    if (event.key === "Escape" && !panel.hidden) hide();
+  });
+})();

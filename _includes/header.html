@@ -1,0 +1,30 @@
+{% assign home_active = 'active' %}
+{% if page.hide_home_active %}
+  {% assign home_active = nil %}
+{% endif %}
+
+<header class="site-header" id="J_header">
+  <nav class="header-menu" aria-label="主导航">
+    <a class="site-title {{ home_active }}" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+    <div class="header-links">
+      {% for item in site.menu %}
+        {% assign active_class = nil %}
+        {% if page.url contains item.url and item.url != '/' %}
+          {% assign active_class = 'active' %}
+        {% endif %}
+        {% if item.url contains 'http://' or item.url contains 'https://' %}
+          <a class="{{ active_class }}" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>
+        {% else %}
+          <a class="{{ active_class }}" href="{{ item.url | relative_url }}">{{ item.title }}</a>
+        {% endif %}
+      {% endfor %}
+      <button class="search-button" type="button" id="J_search_open" data-search-url="{{ '/search.json' | relative_url }}" aria-label="搜索文章" title="搜索文章">Search</button>
+    </div>
+  </nav>
+
+  {% assign header_text = page.title | default: site.description %}
+  <div class="entry-header">
+    <p class="header-title">{{ header_text }}</p>
+    <canvas id="J_firework_canvas" aria-hidden="true"></canvas>
+  </div>
+</header>

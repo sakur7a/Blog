@@ -1,0 +1,11 @@
+---
+layout: base
+---
+
+<section class="post-list" aria-label="最新文章">
+  {% for post in site.posts %}
+    {% include post-item.html post=post %}
+  {% endfor %}
+</section>
+
+{{ content }}
