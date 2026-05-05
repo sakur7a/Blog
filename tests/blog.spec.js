@@ -23,3 +23,14 @@ test("search finds the example post", async ({ page }) => {
 
   await expect(page.locator(".search-result")).toContainText("第一篇文章");
 });
+
+test("archive groups posts by writing categories", async ({ page }) => {
+  await page.goto("archive.html");
+
+  await expect(page.getByRole("link", { name: /随笔/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /学习/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "随笔" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "学习" })).toBeVisible();
+  await expect(page.locator("#essays")).toContainText("第一篇文章：把博客先跑起来");
+  await expect(page.locator("#study")).toContainText("这一类还在等第一篇文章");
+});

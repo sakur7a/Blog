@@ -4,11 +4,43 @@ title: Archive
 hide_home_active: true
 ---
 
-<section class="archive-list" aria-label="文章归档">
-  {% for post in site.posts %}
-  <a class="archive-row" href="{{ post.url | relative_url }}">
-    <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y-%m-%d" }}</time>
-    <span>{{ post.title }}</span>
-  </a>
+<nav class="archive-tabs" aria-label="文章分类">
+  {% for category in site.archive_categories %}
+    {% assign category_posts = site.posts | where_exp: "post", "post.categories contains category.name" %}
+    <a href="#{{ category.slug }}">
+      <span>{{ category.name }}</span>
+      <em>{{ category_posts.size }}</em>
+    </a>
   {% endfor %}
-</section>
+</nav>
+
+<div class="archive-groups">
+  {% for category in site.archive_categories %}
+    {% assign category_posts = site.posts | where_exp: "post", "post.categories contains category.name" %}
+    <section class="archive-group" id="{{ category.slug }}" aria-labelledby="{{ category.slug }}-title">
+      <header class="archive-group-header">
+        <div>
+          <h2 id="{{ category.slug }}-title">{{ category.name }}</h2>
+          <p>{{ category.description }}</p>
+        </div>
+        <span>{{ category_posts.size }} 篇</span>
+      </header>
+
+      {% if category_posts.size > 0 %}
+        <div class="archive-list" aria-label="{{ category.name }}文章">
+          {% for post in category_posts %}
+            <a class="archive-row" href="{{ post.url | relative_url }}">
+              <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%Y-%m-%d" }}</time>
+              <span>
+                <strong>{{ post.title }}</strong>
+                {% if post.summary %}<small>{{ post.summary }}</small>{% endif %}
+              </span>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="archive-empty">这一类还在等第一篇文章。</p>
+      {% endif %}
+    </section>
+  {% endfor %}
+</div>

@@ -36,6 +36,14 @@ social:
   links:
     - "https://github.com/sakur7a"
 
+archive_categories:
+  - name: "随笔"
+    slug: "essays"
+    description: "日常观察、生活片段和那些暂时不急着下结论的想法。"
+  - name: "学习"
+    slug: "study"
+    description: "读书、课程、技术笔记和阶段性复盘。"
+
 sass:
   style: compressed
 

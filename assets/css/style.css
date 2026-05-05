@@ -244,26 +244,126 @@ a {
   border: 1px solid #e1d9f7;
 }
 
+.archive-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 4px 0 34px;
+}
+
+.archive-tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 5px 14px 6px;
+  border: 1px solid rgba(36, 41, 47, 0.12);
+  border-radius: 999px;
+  background: rgba(247, 246, 239, 0.72);
+  color: rgba(36, 41, 47, 0.82);
+  box-shadow: 0 8px 24px rgba(21, 20, 26, 0.04);
+}
+
+.archive-tabs a:hover {
+  border-color: rgba(36, 41, 47, 0.28);
+  color: #15141a;
+}
+
+.archive-tabs em {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font-style: normal;
+  font-size: 13px;
+  line-height: 22px;
+  text-align: center;
+}
+
+.archive-groups {
+  display: grid;
+  gap: 42px;
+}
+
+.archive-group {
+  scroll-margin-top: 22px;
+}
+
+.archive-group-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.archive-group-header h2 {
+  margin: 0 0 4px;
+  color: rgba(0, 0, 0, 0.9);
+  font-size: 28px;
+  line-height: 1.35;
+}
+
+.archive-group-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.archive-group-header > span {
+  flex: 0 0 auto;
+  color: rgba(36, 41, 47, 0.52);
+  font-size: 14px;
+}
+
 .archive-list {
   display: grid;
-  border-top: 1px solid var(--line);
 }
 
 .archive-row {
   display: grid;
   grid-template-columns: 116px 1fr;
   gap: 18px;
-  padding: 14px 0;
+  padding: 16px 0;
   border-bottom: 1px solid var(--line);
 }
 
 .archive-row time {
   color: var(--muted);
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
-.archive-row:hover span {
+.archive-row strong {
+  display: block;
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 19px;
+  line-height: 1.45;
+}
+
+.archive-row small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.archive-row:hover strong {
   color: var(--accent);
+}
+
+.archive-empty {
+  margin: 0;
+  padding: 18px 0 20px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 16px;
 }
 
 .site-footer {
@@ -388,6 +488,15 @@ a {
 
   .archive-row {
     grid-template-columns: 1fr;
-    gap: 2px;
+    gap: 3px;
+  }
+
+  .archive-group-header {
+    display: block;
+  }
+
+  .archive-group-header > span {
+    display: inline-block;
+    margin-top: 8px;
   }
 }

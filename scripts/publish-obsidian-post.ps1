@@ -131,7 +131,7 @@ $yaml = Set-YamlValue -Yaml $yaml -Key "title" -Value ('"{0}"' -f $title)
 $yaml = Set-YamlValue -Yaml $yaml -Key "date" -Value $dateValue
 $categories = Get-YamlValue -Yaml $yaml -Key "categories"
 if ([string]::IsNullOrWhiteSpace($categories)) {
-  $categories = "[Notes]"
+  $categories = "[" + [char]0x968F + [char]0x7B14 + "]"
 }
 $yaml = Set-YamlValue -Yaml $yaml -Key "categories" -Value $categories
 $yaml = Set-YamlValue -Yaml $yaml -Key "summary" -Value ('"{0}"' -f $summary)

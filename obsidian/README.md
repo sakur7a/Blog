@@ -31,7 +31,7 @@ npm run post:publish -- "obsidian/Drafts/文章标题.md"
 ---
 title: "文章标题"
 date: 2026-04-28 20:00:00 +0800
-categories: [Notes]
+categories: [随笔]
 summary: "一句话摘要，会显示在首页和搜索里。"
 published: true
 ---
@@ -40,6 +40,20 @@ published: true
 ```
 
 没有 front matter 也可以，脚本会用文件名和正文第一段生成基础信息。
+
+目前 Archive 使用两个分类：
+
+```yaml
+categories: [随笔]
+```
+
+或者：
+
+```yaml
+categories: [学习]
+```
+
+不写 `categories` 时，脚本会默认归到 `随笔`。
 
 ## 图片写法
 
