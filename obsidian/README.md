@@ -15,7 +15,7 @@
 2. 进入 `Community plugins`。
 3. 关闭 `Restricted mode`。
 4. 在已安装插件中启用 `Sakura Blog Publisher`。
-5. 打开一篇 `Drafts/` 里的 Markdown。
+5. 打开一篇 Markdown。它可以在博客目录里，也可以在你的日常 Obsidian Vault 里。
 6. 点击左侧纸飞机图标，或在命令面板执行 `发布当前文章`。
 7. 在弹窗里确认标题、板块和简介。
 8. 先点 `预览` 检查生成效果；确认无误后点 `发布并推送`。
@@ -87,14 +87,16 @@ categories: [学习]
 
 ## 推荐发布节奏
 
-1. 在 `obsidian/Drafts/` 新建 Markdown，直接写正文。
-2. 插入图片时放在 `obsidian/Attachments/`，正文里用 Obsidian 默认图片语法。
+1. 在你的日常 Obsidian Vault 里新建 Markdown，直接写正文。
+2. 插入图片时用 Obsidian 默认图片语法，图片放在文章旁边或 Vault 附件目录都可以。
 3. 写完后点击插件纸飞机图标。
 4. 在弹窗里选择 `随笔` 或 `学习`，补好标题和简介。
 5. 点 `预览`，刷新本地博客看效果。
-6. 没问题后回到 Obsidian 点 `发布并推送`。
+6. 如果预览效果不想保留，点 `清理上次预览`。
+7. 没问题后回到 Obsidian 点 `发布并推送`。
 
-正式发布会自动生成 `_posts/` 文章、复制图片、运行构建和端到端检查，然后提交并推送到 GitHub Pages。
+正式发布会自动读取当前笔记、生成 `_posts/` 文章、复制图片、运行构建和端到端检查，然后提交并推送到 GitHub Pages。
+预览发布会额外写入 `.obsidian-preview.json` 清单，清理按钮只按这份清单撤回上次预览生成的文件。
 
 ## 图片写法
 

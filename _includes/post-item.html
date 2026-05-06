@@ -1,4 +1,12 @@
 <a href="{{ include.post.url | relative_url }}" rel="bookmark" title="{{ include.post.title | escape }}" class="post-card">
+  {% if include.post.cover %}
+    <div
+      class="post-card-cover"
+      role="img"
+      aria-label="{{ include.post.title | escape }} 封面"
+      style="background-image: url('{{ include.post.cover | relative_url }}'); background-position: {{ include.post.cover_position | default: '50% 50%' }};"
+    ></div>
+  {% endif %}
   <article class="hentry">
     <h2 class="entry-title">{{ include.post.title }}</h2>
     <p class="entry-summary">

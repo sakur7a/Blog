@@ -9,7 +9,24 @@ body_id: post
     <span>{{ page.categories | join: " / " | default: "Notes" }}</span>
     <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y-%m-%d" }}</time>
   </p>
-  <div class="entry-content">
-    {{ content }}
+
+  {% if page.cover %}
+    <div
+      class="post-cover"
+      role="img"
+      aria-label="{{ page.title | escape }} 封面"
+      style="background-image: url('{{ page.cover | relative_url }}'); background-position: {{ page.cover_position | default: '50% 50%' }};"
+    ></div>
+  {% endif %}
+
+  <div class="post-body-layout">
+    <aside class="post-toc" aria-labelledby="post-toc-title" hidden>
+      <h2 id="post-toc-title">文章目录</h2>
+      <nav id="post-toc-nav" aria-label="文章目录"></nav>
+    </aside>
+
+    <div class="entry-content" id="post-content">
+      {{ content }}
+    </div>
   </div>
 </article>

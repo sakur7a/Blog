@@ -140,3 +140,77 @@
     if (event.key === "Escape" && !panel.hidden) hide();
   });
 })();
+
+(function () {
+  var content = document.getElementById("post-content");
+  var toc = document.querySelector(".post-toc");
+  var nav = document.getElementById("post-toc-nav");
+
+  if (!content || !toc || !nav) return;
+
+  var headings = Array.prototype.slice.call(content.querySelectorAll("h2, h3"));
+  if (!headings.length) return;
+
+  function slugify(value, index) {
+    var slug = String(value)
+      .trim()
+      .toLowerCase()
+      .replace(/[^\w\u4e00-\u9fa5]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return slug || "heading-" + index;
+  }
+
+  var used = {};
+  var list = document.createElement("ol");
+
+  headings.forEach(function (heading, index) {
+    var id = heading.id || slugify(heading.textContent, index + 1);
+    if (used[id]) {
+      used[id] += 1;
+      id = id + "-" + used[id];
+    } else {
+      used[id] = 1;
+    }
+    heading.id = id;
+    heading.setAttribute("tabindex", "-1");
+
+    var item = document.createElement("li");
+    item.className = heading.tagName.toLowerCase() === "h3" ? "toc-level-3" : "toc-level-2";
+
+    var link = document.createElement("a");
+    link.href = "#" + id;
+    link.textContent = heading.textContent.trim();
+    item.appendChild(link);
+    list.appendChild(item);
+  });
+
+  nav.appendChild(list);
+  toc.hidden = false;
+})();
+
+(function () {
+  var content = document.getElementById("post-content");
+  if (!content || content.textContent.indexOf("$") === -1) return;
+  var currentScript = document.currentScript;
+
+  window.MathJax = window.MathJax || {
+    tex: {
+      inlineMath: [["$", "$"], ["\\(", "\\)"]],
+      displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+      processEscapes: true
+    },
+    options: {
+      skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+    }
+  };
+
+  if (document.getElementById("J_mathjax")) return;
+
+  var script = document.createElement("script");
+  script.id = "J_mathjax";
+  script.async = true;
+  script.src = currentScript && currentScript.src
+    ? new URL("../vendor/mathjax/tex-svg.js", currentScript.src).toString()
+    : "/assets/vendor/mathjax/tex-svg.js";
+  document.head.appendChild(script);
+})();

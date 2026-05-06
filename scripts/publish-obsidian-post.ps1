@@ -2,6 +2,10 @@ param(
   [Parameter(Mandatory = $true, Position = 0)]
 [string]$DraftPath,
 
+[string]$CoverPath,
+
+[string]$CoverPosition = "50% 50%",
+
 [switch]$NoCommit,
 [switch]$NoPush,
 [switch]$SkipTests
@@ -94,6 +98,20 @@ function Resolve-AttachmentPath {
   return $null
 }
 
+function Write-PreviewManifest {
+  param(
+    [string]$Root,
+    [string[]]$Paths
+  )
+
+  $manifestPath = Join-Path $Root ".obsidian-preview.json"
+  $manifest = @{
+    createdAt = (Get-Date).ToString("o")
+    paths = $Paths
+  }
+  $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+}
+
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $draftFullPath = (Resolve-Path -LiteralPath $DraftPath).Path
 $draftDirectory = Split-Path $draftFullPath -Parent
@@ -142,6 +160,20 @@ $assetDirRelative = "assets/images/posts/$datePrefix-$slug"
 $assetDir = Join-Path $root $assetDirRelative
 New-Item -ItemType Directory -Force -Path $assetDir | Out-Null
 
+if (-not [string]::IsNullOrWhiteSpace($CoverPath)) {
+  $resolvedCoverPath = (Resolve-Path -LiteralPath $CoverPath).Path
+  $coverExtension = [IO.Path]::GetExtension($resolvedCoverPath).ToLowerInvariant()
+  $allowedCoverExtensions = @(".png", ".jpg", ".jpeg", ".webp", ".gif")
+  if ($allowedCoverExtensions -notcontains $coverExtension) {
+    throw "Unsupported cover image type: $coverExtension"
+  }
+
+  $coverFileName = "cover$coverExtension"
+  Copy-Item -LiteralPath $resolvedCoverPath -Destination (Join-Path $assetDir $coverFileName) -Force
+  $yaml = Set-YamlValue -Yaml $yaml -Key "cover" -Value ('"/{0}/{1}"' -f $assetDirRelative, $coverFileName)
+  $yaml = Set-YamlValue -Yaml $yaml -Key "cover_position" -Value ('"{0}"' -f $CoverPosition)
+}
+
 $body = [regex]::Replace($body, '!\[\[([^\]]+)\]\]', {
   param($match)
   $reference = ($match.Groups[1].Value -split '\|')[0]
@@ -172,13 +204,23 @@ $body = [regex]::Replace($body, '!\[([^\]]*)\]\(([^)]+)\)', {
   return "![$alt]({{ '/$assetDirRelative/$name' | relative_url }})"
 })
 
-$postPath = Join-Path $root "_posts/$datePrefix-$slug.md"
+$postRelative = "_posts/$datePrefix-$slug.md"
+$postPath = Join-Path $root $postRelative
 $published = "---`n$($yaml.Trim())`n---`n`n$body`n"
 Set-Content -LiteralPath $postPath -Value $published -Encoding UTF8
 
 $publishedDir = Join-Path $root "obsidian/Published"
 New-Item -ItemType Directory -Force -Path $publishedDir | Out-Null
-Copy-Item -LiteralPath $draftFullPath -Destination (Join-Path $publishedDir (Split-Path $draftFullPath -Leaf)) -Force
+$publishedRelative = "obsidian/Published/$(Split-Path $draftFullPath -Leaf)"
+Copy-Item -LiteralPath $draftFullPath -Destination (Join-Path $root $publishedRelative) -Force
+
+if ($NoCommit -and $NoPush) {
+  Write-PreviewManifest -Root $root -Paths @(
+    $postRelative,
+    $assetDirRelative,
+    $publishedRelative
+  )
+}
 
 Push-Location $root
 try {

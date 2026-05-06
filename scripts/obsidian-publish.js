@@ -6,6 +6,8 @@ const path = require("node:path");
 function parseArgs(argv) {
   const options = {
     draft: "",
+    cover: "",
+    coverPosition: "50% 50%",
     noCommit: false,
     noPush: false,
     skipTests: false
@@ -15,6 +17,12 @@ function parseArgs(argv) {
     const arg = argv[index];
     if (arg === "--draft") {
       options.draft = argv[index + 1] || "";
+      index += 1;
+    } else if (arg === "--cover") {
+      options.cover = argv[index + 1] || "";
+      index += 1;
+    } else if (arg === "--cover-position") {
+      options.coverPosition = argv[index + 1] || "50% 50%";
       index += 1;
     } else if (arg === "--no-commit") {
       options.noCommit = true;
@@ -53,6 +61,10 @@ function runPublisher(options) {
   if (options.noCommit) args.push("-NoCommit");
   if (options.noPush) args.push("-NoPush");
   if (options.skipTests) args.push("-SkipTests");
+  if (options.cover) {
+    args.push("-CoverPath", path.resolve(root, options.cover));
+    args.push("-CoverPosition", options.coverPosition);
+  }
 
   return new Promise((resolve, reject) => {
     const child = spawn("powershell", args, {
