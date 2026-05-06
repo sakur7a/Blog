@@ -290,10 +290,15 @@ body#post #main {
 .post-toc {
   position: sticky;
   top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 4px 0 0 18px;
   border-left: 1px solid var(--line);
   color: var(--muted);
   font-family: var(--serif-font);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(36, 41, 47, 0.18) transparent;
 }
 
 .post-toc[hidden] {
@@ -320,11 +325,20 @@ body#post #main {
   color: rgba(36, 41, 47, 0.62);
   font-size: 14px;
   line-height: 1.5;
-  transition: color 160ms ease;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  border-left: 2px solid transparent;
+  margin-left: -20px;
+  padding: 2px 0 2px 18px;
 }
 
-.post-toc a:hover {
+.post-toc a:hover,
+.post-toc a.is-active {
   color: rgba(0, 0, 0, 0.9);
+}
+
+.post-toc a.is-active {
+  border-color: var(--accent);
+  background: linear-gradient(90deg, rgba(93, 70, 168, 0.08), transparent);
 }
 
 .post-toc .toc-level-3 {
@@ -402,12 +416,20 @@ body#post #main {
   overflow-y: hidden;
   max-width: 100%;
   padding: 0.08em 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.entry-content mjx-container::-webkit-scrollbar {
+  display: none;
 }
 
 .entry-content mjx-container[display="true"] {
   display: block;
   margin: 1.15em 0;
   padding: 0.3em 0;
+  overflow-x: auto;
+  text-align: center;
 }
 
 .entry-content mjx-container:not([display="true"]) {
@@ -718,6 +740,8 @@ body#post #main {
   .post-toc {
     position: static;
     order: -1;
+    max-height: 220px;
+    overflow-y: auto;
     margin: -8px 0 28px;
     padding: 14px 0 16px;
     border-top: 1px solid var(--line);

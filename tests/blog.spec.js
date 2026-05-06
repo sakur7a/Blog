@@ -46,7 +46,7 @@ test("archive groups posts by writing categories", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "随笔" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "学习" })).toBeVisible();
   await expect(page.locator("#essays")).toContainText("第一篇文章：把博客先跑起来");
-  await expect(page.locator("#study")).toContainText("这一类还在等第一篇文章");
+  await expect(page.locator("#study")).toContainText("ML");
 });
 
 test("post page supports math and heading navigation", async ({ page }) => {
@@ -59,7 +59,24 @@ test("post page supports math and heading navigation", async ({ page }) => {
   await expect(page.locator(".post-toc a", { hasText: "表格示例" })).toBeVisible();
 
   await expect(page.locator('mjx-container:not([display="true"])').first()).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('mjx-container[display="true"]').first()).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('mjx-container[display="true"]')).toHaveCount(2, { timeout: 15000 });
+  await expect(page.locator('mjx-container[display="true"]').first()).toHaveCSS("scrollbar-width", "none");
+});
+
+test("post toc highlights the section currently being read", async ({ page, isMobile }) => {
+  await page.goto("2026-04-28/hello-blog.html");
+
+  const toc = page.locator(".post-toc");
+  await expect(toc).toBeVisible();
+  await expect(toc).toHaveCSS("overflow-y", "auto");
+
+  if (isMobile) {
+    await expect(page.locator(".post-toc a.is-active").first()).toBeVisible();
+    return;
+  }
+
+  await page.locator("#表格示例").evaluate((element) => window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 80));
+  await expect(page.locator(".post-toc a.is-active", { hasText: "表格示例" })).toBeVisible();
 });
 
 test("post page renders markdown tables", async ({ page }) => {
@@ -71,10 +88,10 @@ test("post page renders markdown tables", async ({ page }) => {
   await expect(table).toContainText("块级公式");
 });
 
-test("ML preview post is removed from the site", async ({ page }) => {
+test("ML post remains published in the study section", async ({ page }) => {
   await page.goto("./");
 
-  await expect(page.getByRole("heading", { name: "ML" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "ML" })).toBeVisible();
   await page.goto("2026-05-06/ml.html");
-  await expect(page.getByText("页面没有找到。")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ML" })).toBeVisible();
 });
