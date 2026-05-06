@@ -2,6 +2,8 @@
 layout: page
 title: About
 hide_home_active: true
+header_image: "/assets/images/site/about-hero.png"
+header_position: "50% 42%"
 ---
 
 这里是你的个人介绍页。

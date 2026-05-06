@@ -15,8 +15,18 @@ test("post page renders readable article content", async ({ page }) => {
   await page.goto("2026-04-28/hello-blog.html");
 
   await expect(page.getByRole("heading", { name: "第一篇文章：把博客先跑起来" })).toBeVisible();
-  await expect(page.locator(".post-cover")).toHaveCSS("background-size", "cover");
+  await expect(page.locator(".entry-header")).toHaveCSS("background-size", "cover");
+  await expect(page.locator(".entry-header .header-title")).toBeHidden();
+  await expect(page.locator(".post-cover")).toHaveCount(0);
   await expect(page.getByText("今天先把博客跑起来。")).toBeVisible();
+});
+
+test("about page uses its own visual header", async ({ page }) => {
+  await page.goto("about.html");
+
+  await expect(page.locator(".entry-header")).toHaveCSS("background-size", "cover");
+  await expect(page.locator(".entry-header")).toHaveCSS("background-image", /about-hero\.png/);
+  await expect(page.locator(".entry-header .header-title")).toBeHidden();
 });
 
 test("search finds the example post", async ({ page }) => {

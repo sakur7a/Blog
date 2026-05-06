@@ -23,7 +23,13 @@
   </nav>
 
   {% assign header_text = page.title | default: site.description %}
-  <div class="entry-header">
+  {% assign header_image = page.cover | default: page.header_image %}
+  <div
+    class="entry-header{% if header_image %} has-image{% endif %}"
+    {% if header_image %}
+      style="background-image: url('{{ header_image | relative_url }}'); background-position: {{ page.cover_position | default: page.header_position | default: '50% 50%' }};"
+    {% endif %}
+  >
     <p class="header-title">{{ header_text }}</p>
     <canvas id="J_firework_canvas" aria-hidden="true"></canvas>
   </div>

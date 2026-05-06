@@ -15,5 +15,6 @@ obsidian/.obsidian/plugins/*
 obsidian/Drafts/
 obsidian/Templates/
 obsidian/Attachments/
+.obsidian-cover-upload/
 .DS_Store
 Thumbs.db

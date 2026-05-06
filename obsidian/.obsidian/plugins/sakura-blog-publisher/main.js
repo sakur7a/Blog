@@ -1,5 +1,6 @@
 const { Modal, Notice, Plugin, PluginSettingTab, Setting } = require("obsidian");
 const { spawn } = require("child_process");
+const fs = require("fs");
 const path = require("path");
 
 const DEFAULT_SETTINGS = {
@@ -83,6 +84,22 @@ function clampPercent(value) {
 function pathToFileUrl(filePath) {
   if (!filePath) return "";
   return `file:///${String(filePath).replace(/\\/g, "/").replace(/^\/+/, "")}`;
+}
+
+function safeFileName(fileName) {
+  const extension = path.extname(fileName || "cover.png").toLowerCase() || ".png";
+  const baseName = path.basename(fileName || "cover", extension).replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "");
+  return `${baseName || "cover"}-${Date.now()}${extension}`;
+}
+
+async function stageCoverFile(file, blogRoot) {
+  const uploadDir = path.join(blogRoot, ".obsidian-cover-upload");
+  fs.mkdirSync(uploadDir, { recursive: true });
+
+  const targetPath = path.join(uploadDir, safeFileName(file.name));
+  const bytes = Buffer.from(await file.arrayBuffer());
+  fs.writeFileSync(targetPath, bytes);
+  return targetPath;
 }
 
 module.exports = class SakuraBlogPublisher extends Plugin {
@@ -250,6 +267,24 @@ module.exports = class SakuraBlogPublisher extends Plugin {
         text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
         user-select: none;
       }
+      .sakura-publisher-cover-preview::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.24)) 33.33% 0 / 1px 100% no-repeat,
+          linear-gradient(rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.24)) 66.66% 0 / 1px 100% no-repeat,
+          linear-gradient(90deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.24)) 0 33.33% / 100% 1px no-repeat,
+          linear-gradient(90deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.24)) 0 66.66% / 100% 1px no-repeat;
+        pointer-events: none;
+      }
+      .sakura-publisher-cover-frame {
+        position: absolute;
+        inset: 10px;
+        border: 2px solid rgba(255, 255, 255, 0.88);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22), 0 0 0 999px rgba(0, 0, 0, 0.08);
+        pointer-events: none;
+      }
       .sakura-publisher-cover-marker {
         position: absolute;
         width: 18px;
@@ -343,17 +378,22 @@ class PublishPostModal extends Modal {
       }
     });
     coverInput.addClass("sakura-publisher-cover-input");
-    coverInput.addEventListener("change", () => {
+    coverInput.addEventListener("change", async () => {
       const file = coverInput.files && coverInput.files[0];
       if (!file) return;
 
-      this.metadata.coverPath = file.path || "";
-      this.metadata.coverName = file.name || path.basename(this.metadata.coverPath);
-      if (!this.metadata.coverPath) {
-        new Notice("没有读到封面图路径，请在桌面版 Obsidian 中选择本地图片。");
-        return;
+      try {
+        this.metadata.coverPath = await stageCoverFile(file, this.plugin.settings.blogRoot);
+        this.metadata.coverName = file.name || path.basename(this.metadata.coverPath);
+        if (this.metadata.coverPreviewUrl) {
+          URL.revokeObjectURL(this.metadata.coverPreviewUrl);
+        }
+        this.metadata.coverPreviewUrl = URL.createObjectURL(file);
+        this.renderPreview();
+      } catch (error) {
+        console.error(error);
+        new Notice(`无法读取封面图：${error.message}`);
       }
-      this.renderPreview();
     });
 
     this.previewEl = contentEl.createDiv({ cls: "sakura-publisher-preview" });
@@ -392,10 +432,11 @@ class PublishPostModal extends Modal {
           "aria-label": "调整封面显示区域"
         }
       });
-      cover.setText("拖动或点击，调整封面显示区域");
-      cover.style.backgroundImage = `url("${pathToFileUrl(this.metadata.coverPath)}")`;
+      cover.setText("拖动图片，调整横幅裁切区域");
+      cover.style.backgroundImage = `url("${this.metadata.coverPreviewUrl || pathToFileUrl(this.metadata.coverPath)}")`;
       cover.style.backgroundPosition = this.metadata.coverPosition;
 
+      cover.createDiv({ cls: "sakura-publisher-cover-frame" });
       const marker = cover.createDiv({ cls: "sakura-publisher-cover-marker" });
       const updateMarker = () => {
         const [x = "50%", y = "50%"] = this.metadata.coverPosition.split(/\s+/);

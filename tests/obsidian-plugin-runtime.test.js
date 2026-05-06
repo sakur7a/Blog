@@ -31,4 +31,6 @@ test("plugin supports choosing a cover image for publishing", () => {
   assert.equal(main.includes("--cover-position"), true);
   assert.equal(main.includes("coverPosition"), true);
   assert.equal(main.includes("调整封面显示区域"), true);
+  assert.equal(main.includes("arrayBuffer()"), true);
+  assert.equal(main.includes("file.path ||"), false);
 });
