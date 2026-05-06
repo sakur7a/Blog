@@ -308,32 +308,66 @@
     return Promise.resolve();
   }
 
+  function latexWithDelimiters(item) {
+    if (item.display) return "$$\n" + item.math + "\n$$";
+    return "$" + item.math + "$";
+  }
+
+  function normalizeCopyText(root) {
+    var clone = root.cloneNode(true);
+
+    Array.from(clone.querySelectorAll(".math-copy-button")).forEach(function (button) {
+      button.remove();
+    });
+
+    Array.from(clone.querySelectorAll(".math-copy-wrap")).forEach(function (wrapper) {
+      var latex = wrapper.getAttribute("data-latex") || "";
+      wrapper.replaceWith(document.createTextNode("\n\n" + latex + "\n\n"));
+    });
+
+    Array.from(clone.querySelectorAll("mjx-container")).forEach(function (node) {
+      var latex = node.getAttribute("data-latex") || "";
+      if (latex) node.replaceWith(document.createTextNode(latex));
+    });
+
+    return clone.innerText
+      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]+\n/g, "\n")
+      .trim();
+  }
+
   function enhanceMathCopy() {
     var mathItems = window.MathJax && window.MathJax.startup && window.MathJax.startup.document
       ? Array.from(window.MathJax.startup.document.math || [])
       : [];
 
     mathItems.forEach(function (item) {
-      if (!item.display || !item.typesetRoot || item.typesetRoot.closest(".math-copy-wrap")) return;
+      if (!item.typesetRoot) return;
+
+      var latex = latexWithDelimiters(item);
+      item.typesetRoot.setAttribute("data-latex", latex);
+      item.typesetRoot.setAttribute("aria-label", latex);
+
+      if (!item.display || item.typesetRoot.closest(".math-copy-wrap")) return;
 
       var mathNode = item.typesetRoot;
       var wrapper = document.createElement("div");
       wrapper.className = "math-copy-wrap";
-      wrapper.setAttribute("data-latex", item.math);
+      wrapper.setAttribute("data-latex", latex);
 
       var button = document.createElement("button");
       button.type = "button";
       button.className = "math-copy-button";
-      button.textContent = "Copy";
+      button.setAttribute("aria-live", "polite");
       button.setAttribute("aria-label", "复制 LaTeX 公式");
       button.setAttribute("title", "复制 LaTeX 公式");
-      button.setAttribute("data-latex", item.math);
+      button.setAttribute("data-latex", latex);
 
       button.addEventListener("click", function () {
-        copyText(item.math).then(function () {
-          button.textContent = "Copied";
+        copyText(latex).then(function () {
+          button.setAttribute("data-copied", "true");
           window.setTimeout(function () {
-            button.textContent = "Copy";
+            button.removeAttribute("data-copied");
           }, 1200);
         });
       });
@@ -343,6 +377,23 @@
       wrapper.appendChild(button);
     });
   }
+
+  content.addEventListener("copy", function (event) {
+    var selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+
+    var range = selection.getRangeAt(0);
+    if (!content.contains(range.commonAncestorContainer)) return;
+
+    var fragment = range.cloneContents();
+    var holder = document.createElement("div");
+    holder.appendChild(fragment);
+    var text = normalizeCopyText(holder);
+    if (!text) return;
+
+    event.preventDefault();
+    event.clipboardData.setData("text/plain", text);
+  });
 
   function scheduleMathCopyEnhancement() {
     var attempts = 0;
