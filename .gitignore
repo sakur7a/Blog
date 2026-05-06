@@ -7,7 +7,11 @@ node_modules/
 screenshots/
 test-results/
 playwright-report/
-.obsidian/
+obsidian/.obsidian/*
+!obsidian/.obsidian/plugins/
+obsidian/.obsidian/plugins/*
+!obsidian/.obsidian/plugins/sakura-blog-publisher/
+!obsidian/.obsidian/plugins/sakura-blog-publisher/**
 obsidian/Drafts/
 obsidian/Templates/
 obsidian/Attachments/

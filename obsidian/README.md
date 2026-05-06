@@ -9,7 +9,16 @@
 
 ## 一键发布
 
-在 PowerShell 中运行：
+推荐使用本地 Obsidian 插件：
+
+1. 打开 Obsidian 设置。
+2. 进入 `Community plugins`。
+3. 关闭 `Restricted mode`。
+4. 在已安装插件中启用 `Sakura Blog Publisher`。
+5. 打开一篇 `Drafts/` 里的 Markdown。
+6. 点击左侧纸飞机图标，或在命令面板执行 `发布当前文章`。
+
+插件会调用同一套发布脚本。你也可以继续在 PowerShell 中运行：
 
 ```powershell
 npm run post:publish -- "obsidian/Drafts/文章标题.md"

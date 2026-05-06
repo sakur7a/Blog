@@ -15,7 +15,9 @@ function Convert-ToSlug {
   $slug = $slug -replace "[^\p{Ll}\p{Lu}\p{Nd}]+", "-"
   $slug = $slug.Trim("-")
   if ([string]::IsNullOrWhiteSpace($slug)) {
-    $slug = "post"
+    $hashBytes = [System.Security.Cryptography.SHA1]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($Value))
+    $hash = -join ($hashBytes[0..2] | ForEach-Object { $_.ToString("x2") })
+    $slug = "post-$hash"
   }
   return $slug
 }
