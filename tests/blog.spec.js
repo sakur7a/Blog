@@ -65,6 +65,31 @@ test("post page supports math and heading navigation", async ({ page }) => {
   await expect(page.locator("#MathJax_Menu")).toHaveCount(0);
 });
 
+test("post formulas expose copy buttons for latex source", async ({ page }) => {
+  await page.goto("2026-04-28/hello-blog.html");
+  await page.waitForSelector('mjx-container[display="true"]', { timeout: 15000 });
+
+  const copyButtons = page.locator(".math-copy-button");
+  await expect(copyButtons).toHaveCount(2);
+  await expect(copyButtons.first()).toHaveAttribute("data-latex", /\\sum/);
+
+  await page.evaluate(() => {
+    window.__copiedLatex = "";
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value) => {
+          window.__copiedLatex = value;
+        }
+      }
+    });
+  });
+
+  await copyButtons.first().click();
+  await expect.poll(() => page.evaluate(() => window.__copiedLatex)).toContain("\\sum");
+  await expect(copyButtons.first()).toHaveText("Copied");
+});
+
 test("post toc highlights the section currently being read", async ({ page, isMobile }) => {
   await page.goto("2026-04-28/hello-blog.html");
 

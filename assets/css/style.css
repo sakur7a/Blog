@@ -419,6 +419,7 @@ body#post #main {
   padding: 0.08em 0;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  user-select: text;
 }
 
 .entry-content mjx-container::-webkit-scrollbar {
@@ -431,6 +432,48 @@ body#post #main {
   padding: 0.3em 0;
   overflow-x: auto;
   text-align: center;
+}
+
+.math-copy-wrap {
+  position: relative;
+  margin: 1.15em 0;
+  padding-right: 52px;
+  user-select: text;
+}
+
+.math-copy-wrap mjx-container[display="true"] {
+  margin: 0;
+}
+
+.math-copy-button {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  min-width: 44px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid rgba(36, 41, 47, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(36, 41, 47, 0.58);
+  font-family: var(--ui-font);
+  font-size: 12px;
+  line-height: 24px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.math-copy-wrap:hover .math-copy-button,
+.math-copy-button:focus-visible {
+  opacity: 1;
+}
+
+.math-copy-button:hover,
+.math-copy-button:focus-visible {
+  border-color: rgba(93, 70, 168, 0.36);
+  color: var(--accent);
+  outline: 0;
 }
 
 .entry-content mjx-container:not([display="true"]) {

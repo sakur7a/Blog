@@ -291,6 +291,71 @@
   if (!content || content.textContent.indexOf("$") === -1) return;
   var currentScript = document.currentScript;
 
+  function copyText(value) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(value);
+    }
+
+    var textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "readonly");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+    return Promise.resolve();
+  }
+
+  function enhanceMathCopy() {
+    var mathItems = window.MathJax && window.MathJax.startup && window.MathJax.startup.document
+      ? Array.from(window.MathJax.startup.document.math || [])
+      : [];
+
+    mathItems.forEach(function (item) {
+      if (!item.display || !item.typesetRoot || item.typesetRoot.closest(".math-copy-wrap")) return;
+
+      var mathNode = item.typesetRoot;
+      var wrapper = document.createElement("div");
+      wrapper.className = "math-copy-wrap";
+      wrapper.setAttribute("data-latex", item.math);
+
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "math-copy-button";
+      button.textContent = "Copy";
+      button.setAttribute("aria-label", "复制 LaTeX 公式");
+      button.setAttribute("title", "复制 LaTeX 公式");
+      button.setAttribute("data-latex", item.math);
+
+      button.addEventListener("click", function () {
+        copyText(item.math).then(function () {
+          button.textContent = "Copied";
+          window.setTimeout(function () {
+            button.textContent = "Copy";
+          }, 1200);
+        });
+      });
+
+      mathNode.parentNode.insertBefore(wrapper, mathNode);
+      wrapper.appendChild(mathNode);
+      wrapper.appendChild(button);
+    });
+  }
+
+  function scheduleMathCopyEnhancement() {
+    var attempts = 0;
+    function tryEnhance() {
+      attempts += 1;
+      enhanceMathCopy();
+      if (!document.querySelector(".math-copy-button") && attempts < 20) {
+        window.setTimeout(tryEnhance, 120);
+      }
+    }
+    tryEnhance();
+  }
+
   window.MathJax = window.MathJax || {
     tex: {
       inlineMath: [["$", "$"], ["\\(", "\\)"]],
@@ -309,6 +374,7 @@
         if (window.MathJax.startup.defaultReady) {
           window.MathJax.startup.defaultReady();
         }
+        scheduleMathCopyEnhancement();
       }
     }
   };
@@ -321,5 +387,7 @@
   script.src = currentScript && currentScript.src
     ? new URL("../vendor/mathjax/tex-svg.js", currentScript.src).toString()
     : "/assets/vendor/mathjax/tex-svg.js";
+  script.addEventListener("load", scheduleMathCopyEnhancement);
   document.head.appendChild(script);
+  window.setTimeout(scheduleMathCopyEnhancement, 600);
 })();
