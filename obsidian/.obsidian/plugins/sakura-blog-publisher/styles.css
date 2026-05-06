@@ -1,3 +1,76 @@
 .sakura-blog-publisher-log {
   font-family: var(--font-monospace);
 }
+
+.sakura-publisher-modal {
+  font-family: var(--font-interface);
+}
+
+.sakura-publisher-modal .setting-item {
+  align-items: flex-start;
+  border-top: 0;
+  padding: 14px 0;
+}
+
+.sakura-publisher-modal input,
+.sakura-publisher-modal select,
+.sakura-publisher-modal textarea,
+.sakura-publisher-modal button {
+  font-family: var(--font-interface);
+}
+
+.sakura-publisher-modal textarea {
+  min-height: 86px;
+  resize: vertical;
+}
+
+.sakura-publisher-desc {
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin: -4px 0 10px;
+}
+
+.sakura-publisher-preview {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  margin-top: 10px;
+  padding: 18px 18px 16px;
+}
+
+.sakura-publisher-preview-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.sakura-publisher-preview h3 {
+  font-size: 21px;
+  line-height: 1.35;
+  margin: 0 0 8px;
+}
+
+.sakura-publisher-preview p {
+  color: var(--text-normal);
+  line-height: 1.7;
+  margin: 12px 0 0;
+}
+
+.sakura-publisher-preview-meta {
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  gap: 8px 14px;
+}
+
+.sakura-publisher-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.sakura-publisher-primary {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}

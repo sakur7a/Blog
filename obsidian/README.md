@@ -17,11 +17,31 @@
 4. 在已安装插件中启用 `Sakura Blog Publisher`。
 5. 打开一篇 `Drafts/` 里的 Markdown。
 6. 点击左侧纸飞机图标，或在命令面板执行 `发布当前文章`。
+7. 在弹窗里确认标题、板块和简介。
+8. 先点 `预览` 检查生成效果；确认无误后点 `发布并推送`。
 
 插件会调用同一套发布脚本。你也可以继续在 PowerShell 中运行：
 
 ```powershell
 npm run post:publish -- "obsidian/Drafts/文章标题.md"
+```
+
+插件源码保存在本项目：
+
+```text
+D:\MyBlog\obsidian\.obsidian\plugins\sakura-blog-publisher
+```
+
+Obsidian 实际加载的插件目录是：
+
+```text
+C:\Users\28068\Documents\Obsidian Vault\.obsidian\plugins\sakura-blog-publisher
+```
+
+以后更新插件后运行下面命令即可同步到 Obsidian，不需要手动复制：
+
+```powershell
+npm run plugin:sync
 ```
 
 脚本会完成：
@@ -49,6 +69,7 @@ published: true
 ```
 
 没有 front matter 也可以，脚本会用文件名和正文第一段生成基础信息。
+插件弹窗会把这些信息写回草稿 front matter，所以你不需要手动记 YAML 格式。
 
 目前 Archive 使用两个分类：
 
@@ -63,6 +84,17 @@ categories: [学习]
 ```
 
 不写 `categories` 时，脚本会默认归到 `随笔`。
+
+## 推荐发布节奏
+
+1. 在 `obsidian/Drafts/` 新建 Markdown，直接写正文。
+2. 插入图片时放在 `obsidian/Attachments/`，正文里用 Obsidian 默认图片语法。
+3. 写完后点击插件纸飞机图标。
+4. 在弹窗里选择 `随笔` 或 `学习`，补好标题和简介。
+5. 点 `预览`，刷新本地博客看效果。
+6. 没问题后回到 Obsidian 点 `发布并推送`。
+
+正式发布会自动生成 `_posts/` 文章、复制图片、运行构建和端到端检查，然后提交并推送到 GitHub Pages。
 
 ## 图片写法
 

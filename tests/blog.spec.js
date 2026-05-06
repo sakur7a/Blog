@@ -21,7 +21,7 @@ test("search finds the example post", async ({ page }) => {
   await page.getByRole("button", { name: "搜索文章" }).click();
   await page.getByPlaceholder("搜索标题或摘要").fill("博客");
 
-  await expect(page.locator(".search-result")).toContainText("第一篇文章");
+  await expect(page.locator(".search-result").filter({ hasText: "第一篇文章" })).toBeVisible();
 });
 
 test("archive groups posts by writing categories", async ({ page }) => {

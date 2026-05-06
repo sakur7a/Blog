@@ -1,7 +1,7 @@
 {
   "id": "sakura-blog-publisher",
   "name": "Sakura Blog Publisher",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minAppVersion": "1.5.0",
   "description": "Publish the current Obsidian note to the Sakura Jekyll blog.",
   "author": "Sakura",
