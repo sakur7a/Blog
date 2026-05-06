@@ -313,6 +313,33 @@
     return "$" + item.math + "$";
   }
 
+  function createMathCopyIcon(name) {
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "1.8");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    path.setAttribute(
+      "d",
+      name === "check"
+        ? "M20 6 9 17l-5-5"
+        : "M8 8h10v10H8z M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+    );
+    svg.appendChild(path);
+    return svg;
+  }
+
+  function setMathCopyButtonState(button, copied) {
+    button.replaceChildren(createMathCopyIcon(copied ? "check" : "copy"));
+    button.setAttribute("data-copied", copied ? "true" : "false");
+  }
+
   function normalizeCopyText(root) {
     var clone = root.cloneNode(true);
 
@@ -362,12 +389,13 @@
       button.setAttribute("aria-label", "复制 LaTeX 公式");
       button.setAttribute("title", "复制 LaTeX 公式");
       button.setAttribute("data-latex", latex);
+      setMathCopyButtonState(button, false);
 
       button.addEventListener("click", function () {
         copyText(latex).then(function () {
-          button.setAttribute("data-copied", "true");
+          setMathCopyButtonState(button, true);
           window.setTimeout(function () {
-            button.removeAttribute("data-copied");
+            setMathCopyButtonState(button, false);
           }, 1200);
         });
       });
@@ -378,12 +406,16 @@
     });
   }
 
-  content.addEventListener("copy", function (event) {
+  document.addEventListener("copy", function (event) {
     var selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
 
     var range = selection.getRangeAt(0);
-    if (!content.contains(range.commonAncestorContainer)) return;
+    if (typeof range.intersectsNode === "function") {
+      if (!range.intersectsNode(content)) return;
+    } else if (!content.contains(range.commonAncestorContainer)) {
+      return;
+    }
 
     var fragment = range.cloneContents();
     var holder = document.createElement("div");

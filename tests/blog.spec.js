@@ -72,6 +72,8 @@ test("post formulas expose copy buttons for latex source", async ({ page }) => {
   const copyButtons = page.locator(".math-copy-button");
   await expect(copyButtons).toHaveCount(2);
   await expect(copyButtons.first()).toHaveAttribute("data-latex", /^\$\$[\s\S]*\\sum[\s\S]*\$\$$/);
+  await expect(copyButtons.first().locator("svg")).toBeVisible();
+  await expect.poll(() => copyButtons.first().evaluate((button) => button.textContent.trim())).toBe("");
 
   await page.evaluate(() => {
     window.__copiedLatex = "";
@@ -109,6 +111,32 @@ test("copying article text preserves latex formulas", async ({ page }) => {
       clipboardData: data
     });
     content.dispatchEvent(event);
+    return data.getData("text/plain");
+  });
+
+  expect(copied).toContain("$n$");
+  expect(copied).toContain("$$\nS = \\sum");
+  expect(copied).toContain("$$\nE = mc^2\n$$");
+});
+
+test("copying a whole-page selection preserves article latex formulas", async ({ page }) => {
+  await page.goto("2026-04-28/hello-blog.html");
+  await page.waitForSelector(".math-copy-button", { timeout: 15000 });
+
+  const copied = await page.evaluate(() => {
+    const range = document.createRange();
+    range.selectNodeContents(document.body);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    const data = new DataTransfer();
+    const event = new ClipboardEvent("copy", {
+      bubbles: true,
+      cancelable: true,
+      clipboardData: data
+    });
+    document.dispatchEvent(event);
     return data.getData("text/plain");
   });
 

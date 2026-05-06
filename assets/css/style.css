@@ -449,54 +449,30 @@ body#post #main {
   position: absolute;
   top: 8px;
   right: 0;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: 1px solid rgba(36, 41, 47, 0.14);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.92);
   color: rgba(36, 41, 47, 0.58);
+  display: inline-grid;
+  place-items: center;
   cursor: pointer;
   opacity: 0;
   transition: opacity 160ms ease, color 160ms ease, border-color 160ms ease;
 }
 
-.math-copy-button::before,
-.math-copy-button::after {
-  content: "";
-  position: absolute;
-  width: 10px;
-  height: 12px;
-  border: 1.5px solid currentColor;
-  border-radius: 2px;
+.math-copy-button svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
 }
 
-.math-copy-button::before {
-  top: 7px;
-  left: 7px;
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.math-copy-button::after {
-  top: 5px;
-  left: 10px;
-  opacity: 0.72;
-}
-
-.math-copy-button[data-copied="true"]::before {
-  width: 11px;
-  height: 6px;
-  top: 8px;
-  left: 8px;
-  border-top: 0;
-  border-right: 0;
-  border-radius: 0;
-  background: transparent;
-  transform: rotate(-45deg);
-}
-
-.math-copy-button[data-copied="true"]::after {
-  display: none;
+.math-copy-button[data-copied="true"] {
+  border-color: rgba(93, 70, 168, 0.36);
+  color: var(--accent);
 }
 
 .math-copy-wrap:hover .math-copy-button,
