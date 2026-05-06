@@ -61,6 +61,8 @@ test("post page supports math and heading navigation", async ({ page }) => {
   await expect(page.locator('mjx-container:not([display="true"])').first()).toBeVisible({ timeout: 15000 });
   await expect(page.locator('mjx-container[display="true"]')).toHaveCount(2, { timeout: 15000 });
   await expect(page.locator('mjx-container[display="true"]').first()).toHaveCSS("scrollbar-width", "none");
+  await page.locator('mjx-container').first().click({ button: "right" });
+  await expect(page.locator("#MathJax_Menu")).toHaveCount(0);
 });
 
 test("post toc highlights the section currently being read", async ({ page, isMobile }) => {
@@ -77,6 +79,18 @@ test("post toc highlights the section currently being read", async ({ page, isMo
 
   await page.locator("#表格示例").evaluate((element) => window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 80));
   await expect(page.locator(".post-toc a.is-active", { hasText: "表格示例" })).toBeVisible();
+});
+
+test("post toc sits to the left of the article body on desktop", async ({ page, isMobile }) => {
+  test.skip(isMobile, "mobile keeps the toc above the article for narrow screens");
+
+  await page.goto("2026-04-28/hello-blog.html");
+
+  const tocBox = await page.locator(".post-toc").boundingBox();
+  const contentBox = await page.locator("#post-content").boundingBox();
+  expect(tocBox).not.toBeNull();
+  expect(contentBox).not.toBeNull();
+  expect(tocBox.x).toBeLessThan(contentBox.x);
 });
 
 test("post page renders markdown tables", async ({ page }) => {

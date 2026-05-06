@@ -112,6 +112,19 @@ function Write-PreviewManifest {
   $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 }
 
+function Normalize-DisplayMath {
+  param([string]$Markdown)
+
+  $normalized = $Markdown -replace "`r`n", "`n"
+  $normalized = [regex]::Replace($normalized, '(?s)(?<!\$)\$\$(.+?)\$\$(?!\$)', {
+    param($match)
+    $math = $match.Groups[1].Value.Trim()
+    $delimiter = [string]([char]36) + [string]([char]36)
+    return "`n`n$delimiter`n$math`n$delimiter`n`n"
+  })
+  return ($normalized -replace "`n{3,}", "`n`n").TrimStart()
+}
+
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $draftFullPath = (Resolve-Path -LiteralPath $DraftPath).Path
 $draftDirectory = Split-Path $draftFullPath -Parent
@@ -203,6 +216,8 @@ $body = [regex]::Replace($body, '!\[([^\]]*)\]\(([^)]+)\)', {
   Copy-Item -LiteralPath $source -Destination (Join-Path $assetDir $name) -Force
   return "![$alt]({{ '/$assetDirRelative/$name' | relative_url }})"
 })
+
+$body = Normalize-DisplayMath -Markdown $body
 
 $postRelative = "_posts/$datePrefix-$slug.md"
 $postPath = Join-Path $root $postRelative

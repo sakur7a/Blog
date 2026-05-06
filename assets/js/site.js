@@ -298,7 +298,18 @@
       processEscapes: true
     },
     options: {
-      skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+      enableMenu: false,
+      skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"],
+      renderActions: {
+        addMenu: []
+      }
+    },
+    startup: {
+      ready: function () {
+        if (window.MathJax.startup.defaultReady) {
+          window.MathJax.startup.defaultReady();
+        }
+      }
     }
   };
 

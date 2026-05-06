@@ -272,18 +272,19 @@ body#post #main {
 
 .post-body-layout {
   display: grid;
-  grid-template-columns: minmax(0, var(--read-width)) 220px;
+  grid-template-columns: 220px minmax(0, var(--read-width));
   gap: 52px;
   align-items: start;
+  justify-content: center;
 }
 
 .post-body-layout .entry-content {
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 1;
 }
 
 .post-body-layout .post-toc {
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 1;
 }
 
