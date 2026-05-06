@@ -2,7 +2,7 @@
 title: "ML"
 categories: [学习]
 summary: "注：AI率百分百，课内复习用"
-cover_position: "42% 68%"
+cover_position: "50% 50%"
 ---
 
 # 一、PCA类算法
