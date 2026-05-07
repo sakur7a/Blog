@@ -38,6 +38,7 @@ test("lists posts with metadata and management paths", () => {
   assert.equal(posts.length, 1);
   assert.equal(posts[0].title, "ML");
   assert.equal(posts[0].category, "学习");
+  assert.equal(posts[0].dateValue, "2026-05-06 20:00:00 +0800");
   assert.equal(posts[0].summary, "机器学习笔记");
   assert.equal(posts[0].postPath, "_posts/2026-05-06-ml.md");
   assert.equal(posts[0].assetPath, "assets/images/posts/2026-05-06-ml");
@@ -65,4 +66,18 @@ test("normalizePostPath rejects paths outside _posts", () => {
 
   assert.throws(() => normalizePostPath(root, "../_config.yml"), /Post path must be inside _posts/);
   assert.throws(() => normalizePostPath(root, "assets/images/demo.png"), /Post path must be inside _posts/);
+});
+
+test("deletePost restores files if build fails", () => {
+  const root = makeRoot();
+  const postPath = path.join(root, "_posts", "2026-05-06-ml.md");
+  const assetDir = path.join(root, "assets", "images", "posts", "2026-05-06-ml");
+  fs.writeFileSync(postPath, "---\ntitle: ML\n---\n正文", "utf8");
+  fs.mkdirSync(assetDir, { recursive: true });
+  fs.writeFileSync(path.join(assetDir, "cover.png"), "image", "utf8");
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ scripts: { build: "node missing-build.js" } }), "utf8");
+
+  assert.throws(() => deletePost(root, "_posts/2026-05-06-ml.md", { deleteAssets: true, noCommit: true, noPush: true }), /npm failed/);
+  assert.equal(fs.existsSync(postPath), true);
+  assert.equal(fs.existsSync(path.join(assetDir, "cover.png")), true);
 });

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 
 function normalizePostPath(root, postPath) {
@@ -41,35 +42,56 @@ function deletePost(root = path.resolve(__dirname, ".."), postPath, options = {}
   }
 
   const removed = [];
-  fs.rmSync(fullPath, { force: true });
-  removed.push(relative);
-
   const assetRelative = assetPathForPost(relative);
   const assetFullPath = path.join(root, assetRelative);
+  const backupRoot = fs.mkdtempSync(path.join(os.tmpdir(), "blog-delete-backup-"));
+  const postBackup = path.join(backupRoot, "post.md");
+  const assetBackup = path.join(backupRoot, "assets");
+  fs.copyFileSync(fullPath, postBackup);
   if (options.deleteAssets && fs.existsSync(assetFullPath)) {
-    fs.rmSync(assetFullPath, { recursive: true, force: true });
-    removed.push(assetRelative);
+    fs.cpSync(assetFullPath, assetBackup, { recursive: true });
   }
 
-  if (!options.skipBuild) {
-    run(root, "npm", ["run", "build"], { inherit: true, shell: true });
-    if (!options.skipTests) {
-      run(root, "npm", ["run", "test:e2e"], { inherit: true, shell: true });
+  try {
+    fs.rmSync(fullPath, { force: true });
+    removed.push(relative);
+
+    if (options.deleteAssets && fs.existsSync(assetFullPath)) {
+      fs.rmSync(assetFullPath, { recursive: true, force: true });
+      removed.push(assetRelative);
     }
-  }
 
-  if (!options.noCommit) {
-    run(root, "git", ["add", "_posts", "assets/images"], { inherit: true });
-    const status = spawnSync("git", ["status", "--short"], { cwd: root, encoding: "utf8", shell: false });
-    if (status.stdout.trim()) {
-      run(root, "git", ["commit", "-m", `post: delete ${path.basename(relative, ".md")}`], { inherit: true });
-      if (!options.noPush) {
-        run(root, "git", ["-c", "http.sslBackend=openssl", "push", "origin", "main"], { inherit: true });
+    if (!options.skipBuild) {
+      run(root, "npm", ["run", "build"], { inherit: true, shell: true });
+      if (!options.skipTests) {
+        run(root, "npm", ["run", "test:e2e"], { inherit: true, shell: true });
       }
     }
-  }
 
-  return { removed };
+    if (!options.noCommit) {
+      run(root, "git", ["add", "_posts", "assets/images"], { inherit: true });
+      const status = spawnSync("git", ["status", "--short"], { cwd: root, encoding: "utf8", shell: false });
+      if (status.stdout.trim()) {
+        run(root, "git", ["commit", "-m", `post: delete ${path.basename(relative, ".md")}`], { inherit: true });
+        if (!options.noPush) {
+          run(root, "git", ["-c", "http.sslBackend=openssl", "push", "origin", "main"], { inherit: true });
+        }
+      }
+    }
+
+    return { removed };
+  } catch (error) {
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.copyFileSync(postBackup, fullPath);
+    if (options.deleteAssets && fs.existsSync(assetBackup)) {
+      fs.rmSync(assetFullPath, { recursive: true, force: true });
+      fs.mkdirSync(path.dirname(assetFullPath), { recursive: true });
+      fs.cpSync(assetBackup, assetFullPath, { recursive: true });
+    }
+    throw error;
+  } finally {
+    fs.rmSync(backupRoot, { recursive: true, force: true });
+  }
 }
 
 function parseArgs(argv) {

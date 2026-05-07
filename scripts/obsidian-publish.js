@@ -8,6 +8,8 @@ function parseArgs(argv) {
     draft: "",
     cover: "",
     coverPosition: "50% 50%",
+    date: "",
+    slug: "",
     noCommit: false,
     noPush: false,
     skipTests: false
@@ -23,6 +25,12 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--cover-position") {
       options.coverPosition = argv[index + 1] || "50% 50%";
+      index += 1;
+    } else if (arg === "--date") {
+      options.date = argv[index + 1] || "";
+      index += 1;
+    } else if (arg === "--slug") {
+      options.slug = argv[index + 1] || "";
       index += 1;
     } else if (arg === "--no-commit") {
       options.noCommit = true;
@@ -61,6 +69,8 @@ function runPublisher(options) {
   if (options.noCommit) args.push("-NoCommit");
   if (options.noPush) args.push("-NoPush");
   if (options.skipTests) args.push("-SkipTests");
+  if (options.date) args.push("-DateOverride", options.date);
+  if (options.slug) args.push("-SlugOverride", options.slug);
   if (options.cover) {
     args.push("-CoverPath", path.resolve(root, options.cover));
     args.push("-CoverPosition", options.coverPosition);

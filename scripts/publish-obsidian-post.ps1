@@ -6,6 +6,10 @@ param(
 
 [string]$CoverPosition = "50% 50%",
 
+[string]$DateOverride,
+
+[string]$SlugOverride,
+
 [switch]$NoCommit,
 [switch]$NoPush,
 [switch]$SkipTests
@@ -140,12 +144,18 @@ if ([string]::IsNullOrWhiteSpace($title)) {
 
 $now = Get-Date
 $dateValue = Get-YamlValue -Yaml $yaml -Key "date"
+if (-not [string]::IsNullOrWhiteSpace($DateOverride)) {
+  $dateValue = $DateOverride
+}
 if ([string]::IsNullOrWhiteSpace($dateValue)) {
   $dateValue = $now.ToString("yyyy-MM-dd HH:mm:ss +0800")
 }
 
 $datePrefix = if ($dateValue -match "^(\d{4}-\d{2}-\d{2})") { $Matches[1] } else { $now.ToString("yyyy-MM-dd") }
 $slug = Get-YamlValue -Yaml $yaml -Key "slug"
+if (-not [string]::IsNullOrWhiteSpace($SlugOverride)) {
+  $slug = $SlugOverride
+}
 if ([string]::IsNullOrWhiteSpace($slug)) {
   $slug = Convert-ToSlug -Value $title
 }
@@ -162,6 +172,7 @@ if ([string]::IsNullOrWhiteSpace($summary)) {
 
 $yaml = Set-YamlValue -Yaml $yaml -Key "title" -Value ('"{0}"' -f $title)
 $yaml = Set-YamlValue -Yaml $yaml -Key "date" -Value $dateValue
+$yaml = Set-YamlValue -Yaml $yaml -Key "slug" -Value $slug
 $categories = Get-YamlValue -Yaml $yaml -Key "categories"
 if ([string]::IsNullOrWhiteSpace($categories)) {
   $categories = "[" + [char]0x968F + [char]0x7B14 + "]"
@@ -252,7 +263,7 @@ try {
     if ($changes) {
       git commit -m $commitMessage
       if (-not $NoPush) {
-        git push
+        git -c http.sslBackend=openssl push origin main
       }
     } else {
       Write-Host "No changes to commit."

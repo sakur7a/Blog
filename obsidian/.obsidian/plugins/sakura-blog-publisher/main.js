@@ -287,7 +287,11 @@ module.exports = class SakuraBlogPublisher extends Plugin {
       await this.runNode([
         "scripts/obsidian-publish.js",
         "--draft",
-        post.sourcePath
+        post.sourcePath,
+        "--date",
+        post.dateValue || post.date,
+        "--slug",
+        post.slug
       ]);
       new Notice("文章已重新发布并推送。");
     } catch (error) {
@@ -304,6 +308,7 @@ module.exports = class SakuraBlogPublisher extends Plugin {
         "delete",
         "--post",
         post.postPath,
+        "--skip-tests",
         ...(deleteAssets ? ["--assets"] : [])
       ]);
       new Notice("文章已删除并推送。");

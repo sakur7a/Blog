@@ -54,6 +54,7 @@ function postInfo(root, fileName, options = {}) {
   const day = match ? match[3] : "";
   const slug = match ? match[4] : dateSlug;
   const title = readYamlValue(yaml, "title") || slug;
+  const dateValue = readYamlValue(yaml, "date") || `${year}-${month}-${day}`;
   const summary = readYamlValue(yaml, "summary") || firstParagraph(body);
   const category = categoryFromYaml(yaml);
   const postPath = `_posts/${fileName}`;
@@ -70,6 +71,7 @@ function postInfo(root, fileName, options = {}) {
   return {
     title,
     date: `${year}-${month}-${day}`,
+    dateValue,
     category,
     summary,
     slug,

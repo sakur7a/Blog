@@ -208,7 +208,7 @@ test("post page renders markdown tables", async ({ page }) => {
 test("ML post remains published in the study section", async ({ page }) => {
   await page.goto("./");
 
-  await expect(page.locator('a.post-card[href$="2026-05-06/ml.html"]').getByRole("heading", { name: "ML" })).toBeVisible();
-  await page.goto("2026-05-06/ml.html");
+  await expect(page.locator('a.post-card[href$="2026-05-07/ml.html"]').getByRole("heading", { name: "ML" })).toBeVisible();
+  await page.goto("2026-05-07/ml.html");
   await expect(page.getByRole("heading", { name: "ML" })).toBeVisible();
 });
