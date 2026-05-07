@@ -300,6 +300,24 @@ module.exports = class SakuraBlogPublisher extends Plugin {
     }
   }
 
+  async replaceCoverForPost(post, coverPath) {
+    new Notice(`开始更换封面：${post.title}`);
+    try {
+      await this.runNode([
+        "scripts/replace-cover.js",
+        "--post",
+        post.postPath,
+        "--cover",
+        coverPath,
+        "--skip-tests"
+      ]);
+      new Notice("封面已更换并推送。");
+    } catch (error) {
+      console.error(error);
+      new Notice(`更换封面失败：${error.message}`);
+    }
+  }
+
   async deleteManagedPost(post, { deleteAssets }) {
     new Notice(`开始删除：${post.title}`);
     try {
@@ -768,6 +786,7 @@ class ManagePostsModal extends Modal {
       meta.createSpan({ text: post.category || "随笔" });
       meta.createSpan({ text: post.postPath });
       if (post.sourcePath) meta.createSpan({ text: `源稿：${post.sourcePath}` });
+      if (post.cover) meta.createSpan({ text: `封面：${post.cover.split("/").pop()}` });
       if (post.summary) {
         item.createEl("p", { cls: "sakura-manager-summary", text: post.summary });
       }
@@ -787,6 +806,26 @@ class ManagePostsModal extends Modal {
       republishButton.addEventListener("click", async () => {
         await this.plugin.republishManagedPost(post);
         await this.loadPosts();
+      });
+
+      const coverButton = actions.createEl("button", { text: "更换封面" });
+      coverButton.addEventListener("click", () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/png,image/jpeg,image/webp,image/gif";
+        input.addEventListener("change", async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          try {
+            const stagedPath = await stageCoverFile(file, this.plugin.settings.blogRoot);
+            await this.plugin.replaceCoverForPost(post, stagedPath);
+            await this.loadPosts();
+          } catch (error) {
+            console.error(error);
+            new Notice(`更换封面失败：${error.message}`);
+          }
+        });
+        input.click();
       });
 
       const deleteButton = actions.createEl("button", { text: "删除文章" });

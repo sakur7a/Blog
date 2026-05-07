@@ -7,7 +7,7 @@
     "build": "bundle exec jekyll build",
     "clean": "bundle exec jekyll clean",
     "test:e2e": "playwright test",
-    "test:unit": "node --test tests/obsidian-publish.test.js tests/obsidian-metadata.test.js tests/obsidian-plugin-runtime.test.js tests/cleanup-preview.test.js tests/post-management.test.js",
+    "test:unit": "node --test tests/obsidian-publish.test.js tests/obsidian-metadata.test.js tests/obsidian-plugin-runtime.test.js tests/cleanup-preview.test.js tests/post-management.test.js tests/replace-cover.test.js",
     "post:publish": "node scripts/obsidian-publish.js --draft",
     "preview:clean": "node scripts/cleanup-obsidian-preview.js",
     "plugin:sync": "powershell -ExecutionPolicy Bypass -File scripts/sync-obsidian-plugin.ps1"

@@ -57,6 +57,7 @@ function postInfo(root, fileName, options = {}) {
   const dateValue = readYamlValue(yaml, "date") || `${year}-${month}-${day}`;
   const summary = readYamlValue(yaml, "summary") || firstParagraph(body);
   const category = categoryFromYaml(yaml);
+  const cover = readYamlValue(yaml, "cover");
   const postPath = `_posts/${fileName}`;
   const assetPath = `assets/images/posts/${dateSlug}`;
   const sourceName = `${title}.md`;
@@ -75,6 +76,7 @@ function postInfo(root, fileName, options = {}) {
     category,
     summary,
     slug,
+    cover,
     postPath,
     assetPath,
     sourcePath,
