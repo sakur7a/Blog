@@ -14,6 +14,26 @@ test("home page shows the blog shell and first post", async ({ page }) => {
   await expect(page.locator(".post-card-cover").first()).toHaveCSS("background-size", "cover");
 });
 
+test("theme toggle switches and persists the color mode", async ({ page }) => {
+  await page.goto("./");
+
+  const toggle = page.locator("#J_theme_toggle");
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-label", "切换深色模式");
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme", "dark");
+
+  await toggle.click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(toggle).toHaveAttribute("aria-label", "切换浅色模式");
+  await expect(page.locator(".header-menu")).toHaveCSS("background-color", "rgb(21, 20, 26)");
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.getByRole("button", { name: "切换浅色模式" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
 test("post page renders readable article content", async ({ page }) => {
   await page.goto("2026-04-28/hello-blog.html");
 
@@ -188,7 +208,7 @@ test("post page renders markdown tables", async ({ page }) => {
 test("ML post remains published in the study section", async ({ page }) => {
   await page.goto("./");
 
-  await expect(page.getByRole("heading", { name: "ML" })).toBeVisible();
+  await expect(page.locator('a.post-card[href$="2026-05-06/ml.html"]').getByRole("heading", { name: "ML" })).toBeVisible();
   await page.goto("2026-05-06/ml.html");
   await expect(page.getByRole("heading", { name: "ML" })).toBeVisible();
 });

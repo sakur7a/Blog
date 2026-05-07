@@ -1,4 +1,43 @@
 (function () {
+  var toggle = document.getElementById("J_theme_toggle");
+  if (!toggle) return;
+
+  var root = document.documentElement;
+  var storageKey = "sakura-theme";
+
+  function storedTheme() {
+    try {
+      return localStorage.getItem(storageKey);
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function saveTheme(theme) {
+    try {
+      localStorage.setItem(storageKey, theme);
+    } catch (error) {}
+  }
+
+  function currentTheme() {
+    return root.getAttribute("data-theme") || storedTheme() || "light";
+  }
+
+  function applyTheme(theme) {
+    root.setAttribute("data-theme", theme);
+    toggle.setAttribute("aria-label", theme === "dark" ? "切换浅色模式" : "切换深色模式");
+    toggle.setAttribute("title", theme === "dark" ? "切换浅色模式" : "切换深色模式");
+  }
+
+  applyTheme(currentTheme());
+  toggle.addEventListener("click", function () {
+    var next = currentTheme() === "dark" ? "light" : "dark";
+    applyTheme(next);
+    saveTheme(next);
+  });
+})();
+
+(function () {
   var canvas = document.getElementById("J_firework_canvas");
   if (!canvas) return;
 
