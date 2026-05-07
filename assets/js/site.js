@@ -25,6 +25,7 @@
 
   function applyTheme(theme) {
     root.setAttribute("data-theme", theme);
+    toggle.textContent = theme === "dark" ? "Light" : "Dark";
     toggle.setAttribute("aria-label", theme === "dark" ? "切换浅色模式" : "切换深色模式");
     toggle.setAttribute("title", theme === "dark" ? "切换浅色模式" : "切换深色模式");
   }
