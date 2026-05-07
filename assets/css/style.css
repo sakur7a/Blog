@@ -124,8 +124,7 @@ a {
 
 .header-links a,
 .site-title,
-.search-button,
-.theme-toggle {
+.search-button {
   border-bottom: 2px solid transparent;
   transition: color 160ms ease, border-color 160ms ease;
 }
@@ -133,14 +132,12 @@ a {
 .header-links a:hover,
 .header-links a.active,
 .site-title.active,
-.search-button:hover,
-.theme-toggle:hover {
+.search-button:hover {
   color: var(--hover);
   border-color: var(--hover);
 }
 
-.search-button,
-.theme-toggle {
+.search-button {
   padding: 0;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -151,26 +148,41 @@ a {
 }
 
 .theme-toggle {
-  width: 24px;
-  height: 24px;
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 44px;
+  height: 44px;
   display: inline-grid;
   place-items: center;
   border: 1px solid var(--line);
   border-radius: 999px;
+  background: var(--nav-bg);
+  color: var(--text);
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 2px 8px var(--nav-shadow);
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 14px var(--nav-shadow);
 }
 
 .theme-toggle-icon {
-  width: 11px;
-  height: 11px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 5px -3px 0 -2px var(--nav-bg);
+  box-shadow: 6px -3px 0 -3px var(--nav-bg);
+  transition: background 200ms ease, box-shadow 200ms ease;
 }
 
 html[data-theme="dark"] .theme-toggle-icon {
   background: transparent;
   box-shadow:
-    inset -3px -2px 0 0 currentColor,
+    inset -4px -3px 0 0 currentColor,
     0 0 0 1px transparent;
 }
 
@@ -885,5 +897,12 @@ body#post #main {
   .archive-group-header > span {
     display: inline-block;
     margin-top: 8px;
+  }
+
+  .theme-toggle {
+    right: 14px;
+    bottom: 14px;
+    width: 40px;
+    height: 40px;
   }
 }
