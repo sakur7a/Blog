@@ -7,6 +7,9 @@ test("home page shows the blog shell and first post", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Archive" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "第一篇文章：把博客先跑起来" })).toBeVisible();
   await expect(page.locator(".entry-header")).toHaveCSS("background-size", "cover");
+  await expect(page.locator(".entry-header")).toHaveCSS("background-image", /home-hero\.png/);
+  await expect(page.locator(".entry-header")).toHaveCSS("background-position", "50% 42%");
+  await expect.poll(() => page.locator(".entry-header").evaluate((header) => header.getAttribute("style") || "")).toContain("background-position: 50% 42%");
   await expect(page.locator(".entry-header .header-title")).toBeHidden();
   await expect(page.locator(".post-card-cover").first()).toHaveCSS("background-size", "cover");
 });

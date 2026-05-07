@@ -34,3 +34,12 @@ test("plugin supports choosing a cover image for publishing", () => {
   assert.equal(main.includes("arrayBuffer()"), true);
   assert.equal(main.includes("file.path ||"), false);
 });
+
+test("plugin exposes separate cover focus controls", () => {
+  const main = fs.readFileSync("obsidian/.obsidian/plugins/sakura-blog-publisher/main.js", "utf8");
+
+  assert.equal(main.includes("横向焦点"), true);
+  assert.equal(main.includes("纵向焦点"), true);
+  assert.equal(main.includes("sakura-publisher-cover-range"), true);
+  assert.equal(main.includes("setCoverPosition"), true);
+});

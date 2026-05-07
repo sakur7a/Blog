@@ -58,7 +58,8 @@ function extractMetadata(content, filePath) {
   const categories = readYamlValue(yaml, "categories") || "[随笔]";
   const categoryMatch = categories.match(/[\[\s,]([^,\]\s]+)[,\]\s]?/);
   const category = categoryMatch ? categoryMatch[1] : "随笔";
-  return { title, summary, category };
+  const coverPosition = readYamlValue(yaml, "cover_position") || "50% 50%";
+  return { title, summary, category, coverPosition };
 }
 
 function applyMetadata(content, metadata) {
@@ -79,6 +80,18 @@ function escapeRegExp(value) {
 
 function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function parseCoverPosition(value) {
+  const parts = String(value || "").match(/-?\d+(?:\.\d+)?/g) || [];
+  return {
+    x: clampPercent(Number(parts[0] ?? 50)),
+    y: clampPercent(Number(parts[1] ?? 50))
+  };
+}
+
+function formatCoverPosition(x, y) {
+  return `${clampPercent(Number(x))}% ${clampPercent(Number(y))}%`;
 }
 
 function pathToFileUrl(filePath) {
@@ -295,6 +308,27 @@ module.exports = class SakuraBlogPublisher extends Plugin {
         transform: translate(-50%, -50%);
         pointer-events: none;
       }
+      .sakura-publisher-cover-controls {
+        display: grid;
+        gap: 10px;
+        margin: 8px 0 14px;
+      }
+      .sakura-publisher-cover-control {
+        display: grid;
+        grid-template-columns: 72px minmax(120px, 1fr) 42px;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+      .sakura-publisher-cover-range {
+        width: 100%;
+      }
+      .sakura-publisher-cover-value {
+        color: var(--text-normal);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
     `;
     document.head.appendChild(this.styleEl);
     this.register(() => this.styleEl.remove());
@@ -312,7 +346,7 @@ class PublishPostModal extends Modal {
       summary: draft.metadata.summary || "",
       category: CATEGORIES.includes(draft.metadata.category) ? draft.metadata.category : "随笔",
       coverPath: "",
-      coverPosition: "50% 50%"
+      coverPosition: draft.metadata.coverPosition || "50% 50%"
     };
   }
 
@@ -434,24 +468,45 @@ class PublishPostModal extends Modal {
       });
       cover.setText("拖动图片，调整横幅裁切区域");
       cover.style.backgroundImage = `url("${this.metadata.coverPreviewUrl || pathToFileUrl(this.metadata.coverPath)}")`;
+      const initialPosition = parseCoverPosition(this.metadata.coverPosition);
+      this.metadata.coverPosition = formatCoverPosition(initialPosition.x, initialPosition.y);
       cover.style.backgroundPosition = this.metadata.coverPosition;
 
       cover.createDiv({ cls: "sakura-publisher-cover-frame" });
       const marker = cover.createDiv({ cls: "sakura-publisher-cover-marker" });
+      const controls = this.previewEl.createDiv({ cls: "sakura-publisher-cover-controls" });
+      const xInput = this.createCoverRangeControl(controls, "横向焦点", initialPosition.x);
+      const yInput = this.createCoverRangeControl(controls, "纵向焦点", initialPosition.y);
       const updateMarker = () => {
-        const [x = "50%", y = "50%"] = this.metadata.coverPosition.split(/\s+/);
-        marker.style.left = x;
-        marker.style.top = y;
+        const position = parseCoverPosition(this.metadata.coverPosition);
+        marker.style.left = `${position.x}%`;
+        marker.style.top = `${position.y}%`;
+        xInput.input.value = String(position.x);
+        yInput.input.value = String(position.y);
+        xInput.valueEl.setText(`${position.x}%`);
+        yInput.valueEl.setText(`${position.y}%`);
       };
-      updateMarker();
+
+      const setCoverPosition = (x, y) => {
+        this.metadata.coverPosition = formatCoverPosition(x, y);
+        cover.style.backgroundPosition = this.metadata.coverPosition;
+        updateMarker();
+      };
+
+      xInput.input.addEventListener("input", () => {
+        const position = parseCoverPosition(this.metadata.coverPosition);
+        setCoverPosition(xInput.input.value, position.y);
+      });
+      yInput.input.addEventListener("input", () => {
+        const position = parseCoverPosition(this.metadata.coverPosition);
+        setCoverPosition(position.x, yInput.input.value);
+      });
 
       const updatePosition = (event) => {
         const rect = cover.getBoundingClientRect();
         const x = clampPercent(((event.clientX - rect.left) / rect.width) * 100);
         const y = clampPercent(((event.clientY - rect.top) / rect.height) * 100);
-        this.metadata.coverPosition = `${x}% ${y}%`;
-        cover.style.backgroundPosition = this.metadata.coverPosition;
-        updateMarker();
+        setCoverPosition(x, y);
       };
 
       cover.addEventListener("pointerdown", (event) => {
@@ -461,6 +516,7 @@ class PublishPostModal extends Modal {
       cover.addEventListener("pointermove", (event) => {
         if (event.buttons === 1) updatePosition(event);
       });
+      updateMarker();
     }
 
     const meta = this.previewEl.createDiv({ cls: "sakura-publisher-preview-meta" });
@@ -473,6 +529,26 @@ class PublishPostModal extends Modal {
     this.previewEl.createEl("p", {
       text: this.metadata.summary || "还没有简介，建议补上一句方便首页和搜索展示。"
     });
+  }
+
+  createCoverRangeControl(parent, label, value) {
+    const row = parent.createDiv({ cls: "sakura-publisher-cover-control" });
+    row.createSpan({ text: label });
+    const input = row.createEl("input", {
+      cls: "sakura-publisher-cover-range",
+      attr: {
+        type: "range",
+        min: "0",
+        max: "100",
+        step: "1",
+        value: String(clampPercent(value))
+      }
+    });
+    const valueEl = row.createSpan({
+      cls: "sakura-publisher-cover-value",
+      text: `${clampPercent(value)}%`
+    });
+    return { input, valueEl };
   }
 
   async submit({ preview }) {
