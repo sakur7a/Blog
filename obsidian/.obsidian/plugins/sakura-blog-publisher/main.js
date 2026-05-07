@@ -2,6 +2,12 @@ const { Modal, Notice, Plugin, PluginSettingTab, Setting } = require("obsidian")
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+let electronShell = null;
+try {
+  electronShell = require("electron").shell;
+} catch (error) {
+  electronShell = null;
+}
 
 const DEFAULT_SETTINGS = {
   blogRoot: "D:\\MyBlog",
@@ -123,6 +129,9 @@ module.exports = class SakuraBlogPublisher extends Plugin {
     this.addRibbonIcon("send", "发布当前文章", () => {
       this.openPublishModal();
     });
+    this.addRibbonIcon("list", "管理文章", () => {
+      this.openManageModal();
+    });
 
     this.addCommand({
       id: "publish-current-post",
@@ -140,6 +149,12 @@ module.exports = class SakuraBlogPublisher extends Plugin {
       id: "cleanup-last-preview",
       name: "清理上次预览",
       callback: () => this.cleanupLastPreview()
+    });
+
+    this.addCommand({
+      id: "manage-posts",
+      name: "管理文章",
+      callback: () => this.openManageModal()
     });
 
     this.addSettingTab(new SakuraPublisherSettingTab(this.app, this));
@@ -221,6 +236,80 @@ module.exports = class SakuraBlogPublisher extends Plugin {
     } catch (error) {
       console.error(error);
       new Notice(`清理失败：${error.message}`);
+    }
+  }
+
+  async openManageModal() {
+    new ManagePostsModal(this.app, this).open();
+  }
+
+  async listPublishedPosts() {
+    const output = await this.runNode(["scripts/list-posts.js"]);
+    return JSON.parse(output || "[]");
+  }
+
+  async copyText(value) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+  }
+
+  async openManagedPost(post) {
+    const target = post.sourcePath || post.postPath;
+    if (!target) {
+      new Notice("没有可打开的文章路径。");
+      return;
+    }
+    const fullPath = path.join(this.settings.blogRoot, target);
+    if (electronShell && electronShell.openPath) {
+      await electronShell.openPath(fullPath);
+      return;
+    }
+    new Notice(`文章路径：${fullPath}`);
+  }
+
+  async republishManagedPost(post) {
+    if (!post.sourcePath) {
+      new Notice("没有找到发布源稿，无法一键重新发布。");
+      return;
+    }
+    new Notice(`开始重新发布：${post.title}`);
+    try {
+      await this.runNode([
+        "scripts/obsidian-publish.js",
+        "--draft",
+        post.sourcePath
+      ]);
+      new Notice("文章已重新发布并推送。");
+    } catch (error) {
+      console.error(error);
+      new Notice(`重新发布失败：${error.message}`);
+    }
+  }
+
+  async deleteManagedPost(post, { deleteAssets }) {
+    new Notice(`开始删除：${post.title}`);
+    try {
+      await this.runNode([
+        "scripts/manage-post.js",
+        "delete",
+        "--post",
+        post.postPath,
+        ...(deleteAssets ? ["--assets"] : [])
+      ]);
+      new Notice("文章已删除并推送。");
+    } catch (error) {
+      console.error(error);
+      new Notice(`删除失败：${error.message}`);
     }
   }
 
@@ -328,6 +417,51 @@ module.exports = class SakuraBlogPublisher extends Plugin {
         color: var(--text-normal);
         font-variant-numeric: tabular-nums;
         text-align: right;
+      }
+      .sakura-manager-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 12px 0 16px;
+      }
+      .sakura-manager-list {
+        display: grid;
+        gap: 10px;
+        max-height: min(62vh, 620px);
+        overflow: auto;
+        padding-right: 4px;
+      }
+      .sakura-manager-post {
+        padding: 12px;
+        border: 1px solid var(--background-modifier-border);
+        border-radius: 8px;
+        background: var(--background-secondary);
+      }
+      .sakura-manager-post h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+      .sakura-manager-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+      .sakura-manager-summary {
+        margin: 8px 0 0;
+        color: var(--text-muted);
+        font-size: 13px;
+      }
+      .sakura-manager-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .sakura-manager-danger {
+        color: var(--text-error);
       }
     `;
     document.head.appendChild(this.styleEl);
@@ -569,6 +703,129 @@ class PublishPostModal extends Modal {
   async cleanup() {
     this.close();
     await this.plugin.cleanupLastPreview();
+  }
+}
+
+class ManagePostsModal extends Modal {
+  constructor(app, plugin) {
+    super(app);
+    this.plugin = plugin;
+    this.posts = [];
+  }
+
+  async onOpen() {
+    const { contentEl } = this;
+    contentEl.addClass("sakura-publisher-modal");
+    contentEl.empty();
+    contentEl.createEl("h2", { text: "管理文章" });
+    contentEl.createEl("p", {
+      cls: "sakura-publisher-desc",
+      text: "统一查看已发布文章。删除会修改本地博客并提交推送，操作前会再次确认。"
+    });
+
+    const toolbar = contentEl.createDiv({ cls: "sakura-manager-toolbar" });
+    this.statusEl = toolbar.createSpan({ text: "正在读取文章..." });
+    const refreshButton = toolbar.createEl("button", { text: "刷新" });
+    refreshButton.addEventListener("click", () => this.loadPosts());
+
+    this.listEl = contentEl.createDiv({ cls: "sakura-manager-list" });
+    await this.loadPosts();
+  }
+
+  async loadPosts() {
+    if (!this.listEl || !this.statusEl) return;
+    this.listEl.empty();
+    this.statusEl.setText("正在读取文章...");
+
+    try {
+      this.posts = await this.plugin.listPublishedPosts();
+      this.statusEl.setText(`共 ${this.posts.length} 篇文章`);
+      this.renderPosts();
+    } catch (error) {
+      console.error(error);
+      this.statusEl.setText("读取失败");
+      this.listEl.createEl("p", { text: error.message || "无法读取文章列表。" });
+    }
+  }
+
+  renderPosts() {
+    this.listEl.empty();
+    if (!this.posts.length) {
+      this.listEl.createEl("p", { text: "还没有已发布文章。" });
+      return;
+    }
+
+    this.posts.forEach((post) => {
+      const item = this.listEl.createDiv({ cls: "sakura-manager-post" });
+      item.createEl("h3", { text: post.title || post.postPath });
+      const meta = item.createDiv({ cls: "sakura-manager-meta" });
+      meta.createSpan({ text: post.date || "无日期" });
+      meta.createSpan({ text: post.category || "随笔" });
+      meta.createSpan({ text: post.postPath });
+      if (post.sourcePath) meta.createSpan({ text: `源稿：${post.sourcePath}` });
+      if (post.summary) {
+        item.createEl("p", { cls: "sakura-manager-summary", text: post.summary });
+      }
+
+      const actions = item.createDiv({ cls: "sakura-manager-actions" });
+      const openButton = actions.createEl("button", { text: "打开源稿" });
+      openButton.addEventListener("click", () => this.plugin.openManagedPost(post));
+
+      const copyButton = actions.createEl("button", { text: "复制链接" });
+      copyButton.addEventListener("click", async () => {
+        await this.plugin.copyText(post.url || post.relativeUrl || "");
+        new Notice("链接已复制。");
+      });
+
+      const republishButton = actions.createEl("button", { text: "重新发布" });
+      republishButton.disabled = !post.sourcePath;
+      republishButton.addEventListener("click", async () => {
+        await this.plugin.republishManagedPost(post);
+        await this.loadPosts();
+      });
+
+      const deleteButton = actions.createEl("button", { text: "删除文章" });
+      deleteButton.addClass("sakura-manager-danger");
+      deleteButton.addEventListener("click", () => new DeletePostModal(this.app, this.plugin, post, this).open());
+    });
+  }
+}
+
+class DeletePostModal extends Modal {
+  constructor(app, plugin, post, manager) {
+    super(app);
+    this.plugin = plugin;
+    this.post = post;
+    this.manager = manager;
+    this.deleteAssets = false;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.addClass("sakura-publisher-modal");
+    contentEl.empty();
+    contentEl.createEl("h2", { text: "确认删除文章" });
+    contentEl.createEl("p", { text: `即将删除：${this.post.title}` });
+    contentEl.createEl("p", { text: this.post.postPath });
+
+    new Setting(contentEl)
+      .setName("同时删除图片资源")
+      .setDesc(this.post.assetPath || "这会删除文章对应的 assets/images/posts 目录。")
+      .addToggle((toggle) => {
+        toggle.setValue(false).onChange((value) => {
+          this.deleteAssets = value;
+        });
+      });
+
+    const actions = contentEl.createDiv({ cls: "sakura-publisher-actions" });
+    actions.createEl("button", { text: "取消" }).addEventListener("click", () => this.close());
+    const confirmButton = actions.createEl("button", { text: "确认删除并推送" });
+    confirmButton.addClass("sakura-manager-danger");
+    confirmButton.addEventListener("click", async () => {
+      this.close();
+      await this.plugin.deleteManagedPost(this.post, { deleteAssets: this.deleteAssets });
+      if (this.manager) await this.manager.loadPosts();
+    });
   }
 }
 

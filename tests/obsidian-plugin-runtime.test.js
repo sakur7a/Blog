@@ -43,3 +43,15 @@ test("plugin exposes separate cover focus controls", () => {
   assert.equal(main.includes("sakura-publisher-cover-range"), true);
   assert.equal(main.includes("setCoverPosition"), true);
 });
+
+test("plugin exposes a post management panel", () => {
+  const main = fs.readFileSync("obsidian/.obsidian/plugins/sakura-blog-publisher/main.js", "utf8");
+
+  assert.equal(main.includes("manage-posts"), true);
+  assert.equal(main.includes("管理文章"), true);
+  assert.equal(main.includes("scripts/list-posts.js"), true);
+  assert.equal(main.includes("scripts/manage-post.js"), true);
+  assert.equal(main.includes("复制链接"), true);
+  assert.equal(main.includes("重新发布"), true);
+  assert.equal(main.includes("删除文章"), true);
+});
