@@ -14,7 +14,8 @@
       "Bash(dir /s /b \"D:\\\\MyBlog\\\\obsidian\\\\.obsidian\\\\plugins\\\\sakura-blog-publisher\")",
       "Bash(node scripts/manage-pages.js list)",
       "Bash(node -c scripts/manage-pages.js)",
-      "Bash(node scripts/manage-pages.js create --title \"测试页面\")"
+      "Bash(node scripts/manage-pages.js create --title \"测试页面\")",
+      "Bash(node scripts/manage-pages.js push)"
     ]
   }
 }
