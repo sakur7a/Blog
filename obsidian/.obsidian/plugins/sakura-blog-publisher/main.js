@@ -392,13 +392,13 @@ module.exports = class SakuraBlogPublisher extends Plugin {
     await this.runNode(["scripts/manage-pages.js", "push"]);
   }
 
-  async openPageInObsidian(pagePath) {
-    const file = this.app.vault.getAbstractFileByPath(pagePath);
-    if (file) {
-      await this.app.workspace.openFile(file);
+  async openPageFile(pagePath) {
+    const fullPath = path.join(this.settings.blogRoot, pagePath);
+    if (electronShell && electronShell.openPath) {
+      await electronShell.openPath(fullPath);
       return;
     }
-    new Notice(`无法找到文件：${pagePath}`);
+    new Notice(`页面路径：${fullPath}`);
   }
 
   async saveSettings() {
@@ -974,7 +974,7 @@ class ManagePagesModal extends Modal {
       const openButton = actions.createEl("button", { text: "打开编辑" });
       openButton.addClass("mod-cta");
       openButton.addEventListener("click", () => {
-        this.plugin.openPageInObsidian(page.path);
+        this.plugin.openPageFile(page.path);
       });
     });
   }
@@ -1007,7 +1007,7 @@ class ManagePagesModal extends Modal {
         try {
           const result = await this.plugin.createPage(title);
           new Notice(`页面已创建：${result.path}`);
-          await this.plugin.openPageInObsidian(result.path);
+          await this.plugin.openPageFile(result.path);
           await this.loadPages();
         } catch (error) {
           console.error(error);
