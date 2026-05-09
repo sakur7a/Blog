@@ -389,7 +389,7 @@ module.exports = class SakuraBlogPublisher extends Plugin {
   }
 
   async pushPages() {
-    await this.runNode(["scripts/manage-pages.js", "push"]);
+    return (await this.runNode(["scripts/manage-pages.js", "push"])).trim();
   }
 
   async openPageFile(pagePath) {
@@ -1021,8 +1021,12 @@ class ManagePagesModal extends Modal {
   async pushPages() {
     new Notice("开始推送页面...");
     try {
-      await this.plugin.pushPages();
-      new Notice("页面已推送部署。");
+      const result = await this.plugin.pushPages();
+      if (result === "no-changes") {
+        new Notice("没有需要推送的改动。");
+      } else {
+        new Notice("页面已推送部署。");
+      }
     } catch (error) {
       console.error(error);
       new Notice(`推送失败：${error.message}`);

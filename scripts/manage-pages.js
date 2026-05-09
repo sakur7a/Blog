@@ -60,6 +60,13 @@ function createPage(title) {
 function pushPages() {
   try {
     execSync("git add -A", { cwd: root, stdio: "pipe" });
+
+    const staged = execSync("git diff --cached --name-only", { cwd: root, stdio: ["pipe", "pipe", "pipe"] }).toString().trim();
+    if (!staged) {
+      process.stdout.write("no-changes");
+      return;
+    }
+
     execSync('git commit -m "update: 更新独立页面"', { cwd: root, stdio: "pipe" });
     execSync("git push", { cwd: root, stdio: "pipe" });
     process.stdout.write("ok");
