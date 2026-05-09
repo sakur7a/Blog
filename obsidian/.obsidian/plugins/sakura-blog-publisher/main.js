@@ -392,6 +392,10 @@ module.exports = class SakuraBlogPublisher extends Plugin {
     return (await this.runNode(["scripts/manage-pages.js", "push"])).trim();
   }
 
+  async setPageHeaderImage(pagePath, imageUrl) {
+    await this.runNode(["scripts/manage-pages.js", "set-header-image", "--page", pagePath, "--image", imageUrl]);
+  }
+
   async openPageFile(pagePath) {
     const fullPath = path.join(this.settings.blogRoot, pagePath);
     if (electronShell && electronShell.openPath) {
@@ -969,6 +973,9 @@ class ManagePagesModal extends Modal {
       item.createEl("h3", { text: page.title });
       const meta = item.createDiv({ cls: "sakura-manager-meta" });
       meta.createSpan({ text: page.path });
+      if (page.headerImage) {
+        meta.createSpan({ text: `头部图片：${page.headerImage}` });
+      }
 
       const actions = item.createDiv({ cls: "sakura-manager-actions" });
       const openButton = actions.createEl("button", { text: "打开编辑" });
@@ -976,7 +983,41 @@ class ManagePagesModal extends Modal {
       openButton.addEventListener("click", () => {
         this.plugin.openPageFile(page.path);
       });
+
+      const headerButton = actions.createEl("button", { text: "设置头部图片" });
+      headerButton.addEventListener("click", () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/png,image/jpeg,image/webp,image/gif";
+        input.addEventListener("change", async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          try {
+            const imageUrl = await this.stageHeaderImage(file, page.path);
+            await this.plugin.setPageHeaderImage(page.path, imageUrl);
+            new Notice(`头部图片已设置：${imageUrl}`);
+            await this.loadPages();
+          } catch (error) {
+            console.error(error);
+            new Notice(`设置失败：${error.message}`);
+          }
+        });
+        input.click();
+      });
     });
+  }
+
+  async stageHeaderImage(file, pagePath) {
+    const blogRoot = this.plugin.settings.blogRoot;
+    const ext = path.extname(file.name || ".png").toLowerCase() || ".png";
+    const baseName = path.basename(file.name || "header", ext).replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "");
+    const safeName = `${baseName || "header"}-${Date.now()}${ext}`;
+    const targetDir = path.join(blogRoot, "assets", "images", "site");
+    fs.mkdirSync(targetDir, { recursive: true });
+    const targetPath = path.join(targetDir, safeName);
+    const bytes = Buffer.from(await file.arrayBuffer());
+    fs.writeFileSync(targetPath, bytes);
+    return `/assets/images/site/${safeName}`;
   }
 
   showCreateDialog() {
