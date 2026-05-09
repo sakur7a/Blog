@@ -19,9 +19,11 @@ function readYamlValue(yaml, key) {
 }
 
 function listPages() {
+  const skip = new Set(["404.html"]);
   const pages = [];
 
   for (const fileName of fs.readdirSync(root)) {
+    if (skip.has(fileName)) continue;
     if (!/\.(md|html)$/i.test(fileName)) continue;
     const fullPath = path.join(root, fileName);
     const stat = fs.statSync(fullPath);
