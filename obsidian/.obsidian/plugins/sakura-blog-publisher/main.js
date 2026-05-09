@@ -157,6 +157,16 @@ module.exports = class SakuraBlogPublisher extends Plugin {
       callback: () => this.openManageModal()
     });
 
+    this.addRibbonIcon("file-text", "管理页面", () => {
+      this.openManagePagesModal();
+    });
+
+    this.addCommand({
+      id: "manage-pages",
+      name: "管理页面",
+      callback: () => this.openManagePagesModal()
+    });
+
     this.addSettingTab(new SakuraPublisherSettingTab(this.app, this));
   }
 
@@ -364,6 +374,33 @@ module.exports = class SakuraBlogPublisher extends Plugin {
     });
   }
 
+  async openManagePagesModal() {
+    new ManagePagesModal(this.app, this).open();
+  }
+
+  async listPages() {
+    const output = await this.runNode(["scripts/manage-pages.js", "list"]);
+    return JSON.parse(output || "[]");
+  }
+
+  async createPage(title) {
+    const output = await this.runNode(["scripts/manage-pages.js", "create", "--title", title]);
+    return JSON.parse(output);
+  }
+
+  async pushPages() {
+    await this.runNode(["scripts/manage-pages.js", "push"]);
+  }
+
+  async openPageInObsidian(pagePath) {
+    const file = this.app.vault.getAbstractFileByPath(pagePath);
+    if (file) {
+      await this.app.workspace.openFile(file);
+      return;
+    }
+    new Notice(`无法找到文件：${pagePath}`);
+  }
+
   async saveSettings() {
     await this.saveData(this.settings);
   }
@@ -485,6 +522,11 @@ module.exports = class SakuraBlogPublisher extends Plugin {
       }
       .sakura-manager-danger {
         color: var(--text-error);
+      }
+      .sakura-pages-actions {
+        display: flex;
+        gap: 8px;
+        margin: 12px 0 16px;
       }
     `;
     document.head.appendChild(this.styleEl);
@@ -870,6 +912,121 @@ class DeletePostModal extends Modal {
       await this.plugin.deleteManagedPost(this.post, { deleteAssets: this.deleteAssets });
       if (this.manager) await this.manager.loadPosts();
     });
+  }
+}
+
+class ManagePagesModal extends Modal {
+  constructor(app, plugin) {
+    super(app);
+    this.plugin = plugin;
+    this.pages = [];
+  }
+
+  async onOpen() {
+    const { contentEl } = this;
+    contentEl.addClass("sakura-publisher-modal");
+    contentEl.empty();
+    contentEl.createEl("h2", { text: "管理页面" });
+    contentEl.createEl("p", {
+      cls: "sakura-publisher-desc",
+      text: "管理博客的独立页面（如 About）。点击打开编辑，修改后可一键推送部署。"
+    });
+
+    this.listEl = contentEl.createDiv({ cls: "sakura-manager-list" });
+    await this.loadPages();
+
+    const actions = contentEl.createDiv({ cls: "sakura-pages-actions" });
+
+    const createButton = actions.createEl("button", { text: "新建页面" });
+    createButton.addEventListener("click", () => this.showCreateDialog());
+
+    const pushButton = actions.createEl("button", { text: "保存并推送" });
+    pushButton.addClass("mod-cta");
+    pushButton.addEventListener("click", () => this.pushPages());
+  }
+
+  async loadPages() {
+    if (!this.listEl) return;
+    this.listEl.empty();
+
+    try {
+      this.pages = await this.plugin.listPages();
+      if (!this.pages.length) {
+        this.listEl.createEl("p", { text: "没有找到独立页面。" });
+        return;
+      }
+      this.renderPages();
+    } catch (error) {
+      console.error(error);
+      this.listEl.createEl("p", { text: `读取失败：${error.message}` });
+    }
+  }
+
+  renderPages() {
+    this.listEl.empty();
+    this.pages.forEach((page) => {
+      const item = this.listEl.createDiv({ cls: "sakura-manager-post" });
+      item.createEl("h3", { text: page.title });
+      const meta = item.createDiv({ cls: "sakura-manager-meta" });
+      meta.createSpan({ text: page.path });
+
+      const actions = item.createDiv({ cls: "sakura-manager-actions" });
+      const openButton = actions.createEl("button", { text: "打开编辑" });
+      openButton.addClass("mod-cta");
+      openButton.addEventListener("click", () => {
+        this.plugin.openPageInObsidian(page.path);
+      });
+    });
+  }
+
+  showCreateDialog() {
+    const modal = new Modal(this.app);
+    let title = "";
+    modal.onOpen = () => {
+      modal.contentEl.empty();
+      modal.contentEl.createEl("h2", { text: "新建页面" });
+
+      new Setting(modal.contentEl)
+        .setName("页面标题")
+        .addText((text) => {
+          text.setPlaceholder("例如：友链").onChange((value) => {
+            title = value.trim();
+          });
+        });
+
+      const actions = modal.contentEl.createDiv({ cls: "sakura-publisher-actions" });
+      actions.createEl("button", { text: "取消" }).addEventListener("click", () => modal.close());
+      const confirmButton = actions.createEl("button", { text: "创建" });
+      confirmButton.addClass("mod-cta");
+      confirmButton.addEventListener("click", async () => {
+        if (!title) {
+          new Notice("请输入页面标题。");
+          return;
+        }
+        modal.close();
+        try {
+          const result = await this.plugin.createPage(title);
+          new Notice(`页面已创建：${result.path}`);
+          await this.plugin.openPageInObsidian(result.path);
+          await this.loadPages();
+        } catch (error) {
+          console.error(error);
+          new Notice(`创建失败：${error.message}`);
+        }
+      });
+    };
+    modal.open();
+  }
+
+  async pushPages() {
+    new Notice("开始推送页面...");
+    try {
+      await this.plugin.pushPages();
+      new Notice("页面已推送部署。");
+    } catch (error) {
+      console.error(error);
+      new Notice(`推送失败：${error.message}`);
+    }
   }
 }
 
