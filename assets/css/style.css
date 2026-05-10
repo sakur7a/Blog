@@ -244,15 +244,17 @@ body#post #main {
 }
 
 .post-card {
-  display: block;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
   padding: 20px 0;
   border-bottom: 1px solid var(--line);
 }
 
 .post-card-cover {
-  width: 100%;
-  aspect-ratio: 16 / 7;
-  margin: 0 0 16px;
+  width: 180px;
+  height: 120px;
+  flex-shrink: 0;
   overflow: hidden;
   border-radius: 8px;
   background-color: var(--paper);
@@ -270,9 +272,9 @@ body#post #main {
 }
 
 .entry-title {
-  margin: 6px 0 8px;
+  margin: 0 0 6px;
   color: var(--strong);
-  font-size: 30px;
+  font-size: 24px;
   line-height: 1.35;
   font-weight: 700;
   transition: color 160ms ease;
@@ -281,8 +283,8 @@ body#post #main {
 .entry-summary {
   margin: 0;
   color: var(--muted);
-  font-size: 17px;
-  line-height: 1.75;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 .entry-summary span {
@@ -846,6 +848,17 @@ body#post #main {
 
   .entry-title {
     font-size: 25px;
+  }
+
+  .post-card {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .post-card-cover {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 7;
   }
 
   .post-title {

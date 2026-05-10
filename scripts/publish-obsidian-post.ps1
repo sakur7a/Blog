@@ -248,30 +248,24 @@ if ($NoCommit -and $NoPush) {
   )
 }
 
-Push-Location $root
-try {
-  npm run build
-  if (-not $SkipTests) {
-    npm run test:e2e
-  }
-
-  if (-not $NoCommit) {
-    git add _posts assets/images obsidian/Published
-    git add .
-    $commitMessage = "post: $title"
-    $changes = git status --short
-    if ($changes) {
-      git commit -m $commitMessage
-      if (-not $NoPush) {
-        git -c http.sslBackend=openssl push origin main
-      }
-    } else {
-      Write-Host "No changes to commit."
-    }
-  }
+npm run build
+if (-not $SkipTests) {
+  npm run test:e2e
 }
-finally {
-  Pop-Location
+
+if (-not $NoCommit) {
+  git add _posts assets/images obsidian/Published
+  git add .
+  $commitMessage = "post: $title"
+  $changes = git status --short
+  if ($changes) {
+    git commit -m $commitMessage
+    if (-not $NoPush) {
+      git -c http.sslBackend=openssl push origin main
+    }
+  } else {
+    Write-Host "No changes to commit."
+  }
 }
 
 Write-Host "Published: $postPath"
