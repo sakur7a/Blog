@@ -1,4 +1,4 @@
-const { Modal, Notice, Plugin, PluginSettingTab, Setting } = require("obsidian");
+const { Modal, Notice, Plugin, PluginSettingTab, Setting, MarkdownRenderer, Component } = require("obsidian");
 const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
@@ -126,10 +126,7 @@ module.exports = class SakuraBlogPublisher extends Plugin {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     this.injectStyles();
 
-    this.addRibbonIcon("send", "发布当前文章", () => {
-      this.openPublishModal();
-    });
-    this.addRibbonIcon("list", "管理", () => {
+    this.addRibbonIcon("send", "Sakura Blog", () => {
       this.openManageContentModal();
     });
 
@@ -161,10 +158,7 @@ module.exports = class SakuraBlogPublisher extends Plugin {
   }
 
   async openPublishModal(options = {}) {
-    const draft = await this.getActiveDraft();
-    if (!draft) return;
-
-    new PublishPostModal(this.app, this, draft, options).open();
+    new ManageContentModal(this.app, this, { defaultTab: "publish" }).open();
   }
 
   async getActiveDraft() {
@@ -633,6 +627,78 @@ module.exports = class SakuraBlogPublisher extends Plugin {
         color: var(--text-muted);
         font-size: 14px;
       }
+      .sakura-publish-preview {
+        margin-top: 16px;
+        border-top: 1px solid var(--background-modifier-border);
+        padding-top: 16px;
+      }
+      .sakura-publish-preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+      .sakura-publish-preview-header button {
+        font-size: 12px;
+        padding: 2px 10px;
+      }
+      .sakura-publish-preview-card {
+        padding: 20px;
+        border: 1px solid var(--background-modifier-border);
+        border-radius: 8px;
+        background: var(--background-primary);
+      }
+      .sakura-publish-preview-card h2 {
+        margin: 0 0 8px;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      .sakura-publish-preview-cover {
+        width: 100%;
+        aspect-ratio: 16 / 7;
+        margin-bottom: 16px;
+        border-radius: 6px;
+        background-size: cover;
+        background-position: center;
+        background-color: var(--background-modifier-border);
+      }
+      .sakura-publish-preview-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-muted);
+        font-size: 13px;
+        margin-bottom: 16px;
+      }
+      .sakura-publish-preview-body {
+        max-height: 45vh;
+        overflow: auto;
+        padding: 16px 20px;
+        border: 1px solid var(--background-modifier-border);
+        border-radius: 6px;
+        background: var(--background-secondary);
+        font-size: 14px;
+        line-height: 1.75;
+      }
+      .sakura-publish-preview-body h1,
+      .sakura-publish-preview-body h2,
+      .sakura-publish-preview-body h3 {
+        margin-top: 1em;
+        margin-bottom: 0.4em;
+      }
+      .sakura-publish-preview-body img {
+        max-width: 100%;
+        border-radius: 4px;
+      }
+      .sakura-publish-preview-body pre {
+        padding: 12px;
+        border-radius: 6px;
+        background: var(--background-primary);
+        overflow-x: auto;
+      }
     `;
     document.head.appendChild(this.styleEl);
     this.register(() => this.styleEl.remove());
@@ -877,25 +943,28 @@ class PublishPostModal extends Modal {
 }
 
 class ManageContentModal extends Modal {
-  constructor(app, plugin) {
+  constructor(app, plugin, options = {}) {
     super(app);
     this.plugin = plugin;
     this.posts = [];
     this.pages = [];
-    this.activeTab = "posts";
+    this.activeTab = options.defaultTab || "publish";
     this.searchQuery = "";
     this.sortMode = "date-desc";
+    this.draft = null;
+    this.publishMeta = null;
   }
 
   async onOpen() {
     const { contentEl } = this;
     contentEl.addClass("sakura-publisher-modal");
     contentEl.empty();
-    contentEl.createEl("h2", { text: "管理博客" });
+    contentEl.createEl("h2", { text: "Sakura Blog" });
 
     const tabBar = contentEl.createDiv({ cls: "sakura-manager-tabs" });
+    this.publishTab = tabBar.createEl("button", { cls: "sakura-manager-tab", text: "发布" });
+    this.publishTab.addEventListener("click", () => this.switchTab("publish"));
     this.postsTab = tabBar.createEl("button", { cls: "sakura-manager-tab", text: "文章" });
-    this.postsTab.addClass("active");
     this.postsTab.addEventListener("click", () => this.switchTab("posts"));
     this.pagesTab = tabBar.createEl("button", { cls: "sakura-manager-tab", text: "页面" });
     this.pagesTab.addEventListener("click", () => this.switchTab("pages"));
@@ -903,10 +972,15 @@ class ManageContentModal extends Modal {
     this.buildToolbar(contentEl);
     this.contentArea = contentEl.createDiv();
 
-    this.postsContainer = this.contentArea.createDiv();
-    this.listEl = this.postsContainer.createDiv({ cls: "sakura-manager-list" });
-    await this.loadPosts();
+    // publish container
+    this.publishContainer = this.contentArea.createDiv();
+    await this.renderPublishForm();
 
+    // posts container
+    this.postsContainer = this.contentArea.createDiv({ attr: { style: "display:none" } });
+    this.listEl = this.postsContainer.createDiv({ cls: "sakura-manager-list" });
+
+    // pages container
     this.pagesContainer = this.contentArea.createDiv({ attr: { style: "display:none" } });
     this.pagesListEl = this.pagesContainer.createDiv({ cls: "sakura-manager-list" });
     const pagesActions = this.pagesContainer.createDiv({ cls: "sakura-manager-toolbar" });
@@ -915,10 +989,13 @@ class ManageContentModal extends Modal {
     const pushButton = pagesActions.createEl("button", { text: "保存并推送" });
     pushButton.addClass("mod-cta");
     pushButton.addEventListener("click", () => this.pushPages());
+
+    this.switchTab(this.activeTab);
   }
 
   buildToolbar(parent) {
-    const toolbar = parent.createDiv({ cls: "sakura-manager-toolbar" });
+    this.toolbarEl = parent.createDiv({ cls: "sakura-manager-toolbar" });
+    const toolbar = this.toolbarEl;
     this.statsEl = toolbar.createSpan({ cls: "sakura-manager-stats", text: "" });
 
     this.searchInput = toolbar.createEl("input", {
@@ -939,6 +1016,148 @@ class ManageContentModal extends Modal {
 
     const refreshButton = toolbar.createEl("button", { text: "刷新" });
     refreshButton.addEventListener("click", () => this.refresh());
+  }
+
+  async renderPublishForm() {
+    this.publishContainer.empty();
+    this.draft = await this.plugin.getActiveDraft();
+
+    if (!this.draft) {
+      const empty = this.publishContainer.createDiv({ cls: "sakura-manager-empty" });
+      empty.createEl("p", { text: "请先打开一篇 Markdown 草稿。" });
+      empty.createEl("p", {
+        cls: "sakura-publisher-desc",
+        text: "在 Obsidian 中打开一篇 .md 文件后切换到此 Tab 即可发布。"
+      });
+      return;
+    }
+
+    this.publishMeta = {
+      title: this.draft.metadata.title || "",
+      summary: this.draft.metadata.summary || "",
+      category: CATEGORIES.includes(this.draft.metadata.category) ? this.draft.metadata.category : "随笔",
+      coverPath: "",
+      coverPosition: this.draft.metadata.coverPosition || "50% 50%"
+    };
+
+    this.publishContainer.createEl("p", {
+      cls: "sakura-publisher-desc",
+      text: `当前草稿：${this.draft.displayPath}`
+    });
+
+    new Setting(this.publishContainer)
+      .setName("标题")
+      .addText((text) => {
+        text
+          .setPlaceholder("文章标题")
+          .setValue(this.publishMeta.title)
+          .onChange((value) => { this.publishMeta.title = value.trim(); });
+      });
+
+    new Setting(this.publishContainer)
+      .setName("板块")
+      .addDropdown((dropdown) => {
+        CATEGORIES.forEach((c) => dropdown.addOption(c, c));
+        dropdown
+          .setValue(this.publishMeta.category)
+          .onChange((value) => { this.publishMeta.category = value; });
+      });
+
+    new Setting(this.publishContainer)
+      .setName("简介")
+      .addTextArea((text) => {
+        text
+          .setPlaceholder("用一两句话概括这篇文章。")
+          .setValue(this.publishMeta.summary)
+          .onChange((value) => { this.publishMeta.summary = value.trim(); });
+        text.inputEl.addClass("sakura-publisher-summary-input");
+      });
+
+    const coverSetting = new Setting(this.publishContainer)
+      .setName("封面图");
+    const coverInput = coverSetting.controlEl.createEl("input", {
+      attr: { type: "file", accept: "image/png,image/jpeg,image/webp,image/gif" }
+    });
+    coverInput.addClass("sakura-publisher-cover-input");
+    this.coverNameEl = coverSetting.descEl;
+    coverInput.addEventListener("change", async () => {
+      const file = coverInput.files && coverInput.files[0];
+      if (!file) return;
+      try {
+        this.publishMeta.coverPath = await stageCoverFile(file, this.plugin.settings.blogRoot);
+        this.publishMeta.coverName = file.name;
+        this.coverNameEl.setText(`已选择：${file.name}`);
+      } catch (error) {
+        console.error(error);
+        new Notice(`无法读取封面图：${error.message}`);
+      }
+    });
+
+    const actions = this.publishContainer.createDiv({ cls: "sakura-publisher-actions" });
+    const contentPreviewBtn = actions.createEl("button", { text: "预览内容" });
+    contentPreviewBtn.addEventListener("click", () => this.toggleContentPreview());
+    const buildPreviewBtn = actions.createEl("button", { cls: "mod-cta", text: "生成预览" });
+    buildPreviewBtn.addEventListener("click", () => this.submitPublish({ preview: true }));
+    const cleanupBtn = actions.createEl("button", { text: "清理上次预览" });
+    cleanupBtn.addEventListener("click", () => this.plugin.cleanupLastPreview());
+    const publishBtn = actions.createEl("button", { text: "发布并推送" });
+    publishBtn.addClass("sakura-publisher-primary");
+    publishBtn.addEventListener("click", () => this.submitPublish({ preview: false }));
+
+    this.previewSection = null;
+  }
+
+  async toggleContentPreview() {
+    if (this.previewSection) {
+      this.previewSection.remove();
+      this.previewSection = null;
+      return;
+    }
+
+    if (!this.draft) return;
+
+    this.previewSection = this.publishContainer.createDiv({ cls: "sakura-publish-preview" });
+    const header = this.previewSection.createDiv({ cls: "sakura-publish-preview-header" });
+    header.createEl("span", { text: "发布后效果预览" });
+    const closeBtn = header.createEl("button", { text: "关闭预览" });
+    closeBtn.addEventListener("click", () => {
+      this.previewSection.remove();
+      this.previewSection = null;
+    });
+
+    const card = this.previewSection.createDiv({ cls: "sakura-publish-preview-card" });
+    if (this.publishMeta.coverPath) {
+      const coverDiv = card.createDiv({ cls: "sakura-publish-preview-cover" });
+      const url = this.publishMeta.coverPreviewUrl || pathToFileUrl(this.publishMeta.coverPath);
+      coverDiv.style.backgroundImage = `url("${url}")`;
+    }
+    card.createEl("h2", { text: this.publishMeta.title || "未填写标题" });
+    const meta = card.createDiv({ cls: "sakura-publish-preview-meta" });
+    meta.createSpan({
+      cls: `sakura-manager-badge sakura-manager-badge--${this.publishMeta.category === "学习" ? "study" : "essay"}`,
+      text: this.publishMeta.category
+    });
+    meta.createSpan({ text: this.publishMeta.summary || "暂无简介" });
+
+    const bodyEl = this.previewSection.createDiv({ cls: "sakura-publish-preview-body" });
+    const body = this.draft.content.replace(/^---[\s\S]*?---\s*/, "").trim();
+    const component = new Component();
+    component.load();
+    await MarkdownRenderer.renderMarkdown(body, bodyEl, this.draft.file.path, component);
+  }
+
+  async submitPublish({ preview }) {
+    if (!this.draft) return;
+    if (!this.publishMeta.title) {
+      new Notice("请先填写标题。");
+      return;
+    }
+    if (!this.publishMeta.summary) {
+      new Notice("请先填写简介。");
+      return;
+    }
+    this.close();
+    await this.plugin.publishDraft(this.draft, this.publishMeta, { preview });
   }
 
   updateSortOptions() {
@@ -968,21 +1187,29 @@ class ManageContentModal extends Modal {
   switchTab(tab) {
     this.activeTab = tab;
     this.searchQuery = "";
-    this.searchInput.value = "";
-    this.updateSortOptions();
+    if (this.searchInput) this.searchInput.value = "";
 
-    if (tab === "posts") {
-      this.postsTab.addClass("active");
-      this.pagesTab.removeClass("active");
-      this.postsContainer.style.display = "";
-      this.pagesContainer.style.display = "none";
+    // update tab active states
+    this.publishTab.toggleClass("active", tab === "publish");
+    this.postsTab.toggleClass("active", tab === "posts");
+    this.pagesTab.toggleClass("active", tab === "pages");
+
+    // show/hide containers
+    this.publishContainer.style.display = tab === "publish" ? "" : "none";
+    this.postsContainer.style.display = tab === "posts" ? "" : "none";
+    this.pagesContainer.style.display = tab === "pages" ? "" : "none";
+
+    // show/hide toolbar
+    this.toolbarEl.style.display = tab === "publish" ? "none" : "";
+
+    if (tab === "publish") {
+      this.renderPublishForm();
+    } else if (tab === "posts") {
+      this.updateSortOptions();
       if (!this.posts.length) this.loadPosts();
       else this.renderPosts();
     } else {
-      this.pagesTab.addClass("active");
-      this.postsTab.removeClass("active");
-      this.pagesContainer.style.display = "";
-      this.postsContainer.style.display = "none";
+      this.updateSortOptions();
       if (!this.pages.length) this.loadPages();
       else this.renderPages();
     }
@@ -990,11 +1217,12 @@ class ManageContentModal extends Modal {
 
   renderCurrentTab() {
     if (this.activeTab === "posts") this.renderPosts();
-    else this.renderPages();
+    else if (this.activeTab === "pages") this.renderPages();
   }
 
   refresh() {
-    if (this.activeTab === "posts") this.loadPosts();
+    if (this.activeTab === "publish") this.renderPublishForm();
+    else if (this.activeTab === "posts") this.loadPosts();
     else this.loadPages();
   }
 

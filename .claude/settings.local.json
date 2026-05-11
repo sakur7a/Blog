@@ -15,7 +15,11 @@
       "Bash(node scripts/manage-pages.js list)",
       "Bash(node -c scripts/manage-pages.js)",
       "Bash(node scripts/manage-pages.js create --title \"测试页面\")",
-      "Bash(node scripts/manage-pages.js push)"
+      "Bash(node scripts/manage-pages.js push)",
+      "Bash(bundle exec *)",
+      "Bash(gh api *)",
+      "Bash(gh run *)",
+      "WebFetch(domain:sakur7a.github.io)"
     ]
   }
 }
