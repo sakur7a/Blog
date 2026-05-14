@@ -104,9 +104,11 @@ function replaceCover(root, postPath, coverPath, options = {}) {
 
   // Update front matter
   let newYaml = setYamlValue(yaml, "cover", `"/${coverDestRelative}"`);
-  // Preserve cover_position, set default if missing
-  const coverPosition = readYamlValue(yaml, "cover_position");
-  if (!coverPosition) {
+  // Use provided position, preserve existing, or set default
+  const coverPosition = options.coverPosition || readYamlValue(yaml, "cover_position");
+  if (coverPosition) {
+    newYaml = setYamlValue(newYaml, "cover_position", `"${coverPosition}"`);
+  } else {
     newYaml = setYamlValue(newYaml, "cover_position", '"50% 50%"');
   }
 
@@ -141,6 +143,7 @@ function parseArgs(argv) {
   const options = {
     post: "",
     cover: "",
+    coverPosition: "",
     noCommit: false,
     noPush: false,
     skipBuild: false,
@@ -154,6 +157,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--cover") {
       options.cover = argv[index + 1] || "";
+      index += 1;
+    } else if (arg === "--cover-position") {
+      options.coverPosition = argv[index + 1] || "";
       index += 1;
     } else if (arg === "--no-commit") {
       options.noCommit = true;
@@ -173,7 +179,7 @@ if (require.main === module) {
   try {
     const options = parseArgs(process.argv.slice(2));
     if (!options.post || !options.cover) {
-      throw new Error("Usage: node scripts/replace-cover.js --post _posts/YYYY-MM-DD-slug.md --cover /path/to/image.png");
+      throw new Error("Usage: node scripts/replace-cover.js --post _posts/YYYY-MM-DD-slug.md --cover /path/to/image.png [--cover-position 'X% Y%']");
     }
     const result = replaceCover(path.resolve(__dirname, ".."), options.post, options.cover, options);
     process.stdout.write(JSON.stringify(result, null, 2));

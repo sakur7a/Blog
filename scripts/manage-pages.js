@@ -36,7 +36,8 @@ function listPages() {
 
     const title = readYamlValue(yaml, "title") || fileName.replace(/\.(md|html)$/i, "");
     const headerImage = readYamlValue(yaml, "header_image") || readYamlValue(yaml, "cover") || "";
-    pages.push({ title, path: fileName, headerImage });
+    const coverPosition = readYamlValue(yaml, "cover_position") || "";
+    pages.push({ title, path: fileName, headerImage, coverPosition });
   }
 
   return pages;
@@ -67,7 +68,7 @@ function writeYamlValue(yaml, key, value) {
   return yaml.trim() ? `${yaml.trimEnd()}\n${line}` : line;
 }
 
-function setHeaderImage(pagePath, imageUrl) {
+function setHeaderImage(pagePath, imageUrl, position) {
   const fullPath = path.join(root, pagePath);
   if (!fs.existsSync(fullPath)) {
     process.stderr.write(`文件不存在：${pagePath}`);
@@ -84,6 +85,9 @@ function setHeaderImage(pagePath, imageUrl) {
   let yaml = match[1];
   const body = match[2];
   yaml = writeYamlValue(yaml, "header_image", `"${imageUrl}"`);
+  if (position) {
+    yaml = writeYamlValue(yaml, "cover_position", `"${position}"`);
+  }
   const newContent = `---\n${yaml.trim()}\n---\n${body}`;
   fs.writeFileSync(fullPath, newContent, "utf8");
   process.stdout.write("ok");
@@ -126,13 +130,15 @@ if (command === "list") {
 } else if (command === "set-header-image") {
   const pageIndex = args.indexOf("--page");
   const imageIndex = args.indexOf("--image");
+  const positionIndex = args.indexOf("--position");
   const page = pageIndex !== -1 ? args[pageIndex + 1] : "";
   const image = imageIndex !== -1 ? args[imageIndex + 1] : "";
+  const position = positionIndex !== -1 ? args[positionIndex + 1] : "";
   if (!page || !image) {
     process.stderr.write("缺少 --page 或 --image 参数");
     process.exit(1);
   }
-  setHeaderImage(page, image);
+  setHeaderImage(page, image, position);
 } else {
   process.stderr.write(`未知命令：${command}\n用法：manage-pages.js <list|create|push>`);
   process.exit(1);
