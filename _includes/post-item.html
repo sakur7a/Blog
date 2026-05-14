@@ -12,5 +12,12 @@
     <p class="entry-summary">
       <span>【{{ include.post.date | date: "%Y-%m-%d" }}】</span>{{ include.post.summary }}
     </p>
+    {% if include.post.tags.size > 0 %}
+    <p class="post-card-tags">
+      {% for tag in include.post.tags %}
+        <a href="{{ '/tags/' | append: tag | relative_url }}" class="tag-chip tag-chip--sm">{{ tag }}</a>
+      {% endfor %}
+    </p>
+    {% endif %}
   </article>
 </a>
