@@ -5,6 +5,9 @@ body_id: post
 
 <article class="post-content hentry">
   <h1 class="post-title entry-title">{{ page.title }}</h1>
+  {% if page.cover %}
+  <div class="post-cover" style="background-image: url('{{ page.cover | relative_url }}'); background-position: {{ page.cover_position | default: '50% 50%' }};"></div>
+  {% endif %}
   <p class="page-info">
     <span>{{ page.categories | join: " / " | default: "Notes" }}</span>
     <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y-%m-%d" }}</time>

@@ -329,7 +329,7 @@
 
 (function () {
   var content = document.getElementById("post-content");
-  if (!content || content.textContent.indexOf("$") === -1) return;
+  if (!content || (content.textContent.indexOf("$") === -1 && content.textContent.indexOf("\\[") === -1)) return;
   var currentScript = document.currentScript;
 
   function copyText(value) {
