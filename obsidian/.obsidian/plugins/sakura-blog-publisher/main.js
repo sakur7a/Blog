@@ -740,6 +740,7 @@ class PublishPostModal extends Modal {
       title: draft.metadata.title || "",
       summary: draft.metadata.summary || "",
       category: CATEGORIES.includes(draft.metadata.category) ? draft.metadata.category : "随笔",
+      tags: draft.metadata.tags || [],
       coverPath: "",
       coverPosition: draft.metadata.coverPosition || "50% 50%"
     };
@@ -795,6 +796,22 @@ class PublishPostModal extends Modal {
             this.renderPreview();
           });
         text.inputEl.addClass("sakura-publisher-summary-input");
+      });
+
+    new Setting(contentEl)
+      .setName("标签")
+      .setDesc("用逗号或空格分隔，如：机器学习, 深度学习, 笔记")
+      .addText((text) => {
+        text
+          .setPlaceholder("标签1, 标签2, 标签3")
+          .setValue(this.metadata.tags.join(", "))
+          .onChange((value) => {
+            this.metadata.tags = value
+              .split(/[,，\s]+/)
+              .map((t) => t.trim())
+              .filter(Boolean);
+            this.renderPreview();
+          });
       });
 
     const coverSetting = new Setting(contentEl)
@@ -916,6 +933,11 @@ class PublishPostModal extends Modal {
 
     const meta = this.previewEl.createDiv({ cls: "sakura-publisher-preview-meta" });
     meta.createSpan({ text: this.metadata.category || "随笔" });
+    if (this.metadata.tags.length) {
+      this.metadata.tags.forEach(function (tag) {
+        meta.createSpan({ text: "#" + tag });
+      });
+    }
     meta.createSpan({ text: this.draft.displayPath });
     if (this.metadata.coverName) {
       meta.createSpan({ text: `封面：${this.metadata.coverName}` });
