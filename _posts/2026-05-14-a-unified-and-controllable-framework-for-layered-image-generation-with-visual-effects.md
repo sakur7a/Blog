@@ -15,7 +15,7 @@ cover: "/assets/images/posts/2026-05-14-a-unified-and-controllable-framework-for
 2. UC Santa Cruz，Adobe Research
 3. [[2601.15507v2] A Unified and Controllable Framework for Layered Image Generation with Visual Effects](https://arxiv.org/abs/2601.15507v2)
 4. 以前的方法，只分解 RGBA 的前景层。把前景层视为物体+阴影。支持三种生成模式：给定前景生成背景、给定背景生成前景和t2l。同时提出了一个 dataset：LASAGNA-48K，包含超过 48K 图像三元组的数据集：composite image、clean background、foreground layer with visual effects。
-![[博客/读论文/A Unified and Controllable Framework for Layered Image Generation with Visual Effects/Pasted image 20260514221417.png]]
+![]({{ '/assets/images/posts/2026-05-14-a-unified-and-controllable-framework-for-layered-image-generation-with-visual-effects/Pasted image 20260514221417.png' | relative_url }})
 
 ---
 # 二、方法
@@ -41,14 +41,14 @@ Lasagna-48K triplets:
     captions
 ```
 
-![[博客/读论文/A Unified and Controllable Framework for Layered Image Generation with Visual Effects/Pasted image 20260514211922.png]]
+![]({{ '/assets/images/posts/2026-05-14-a-unified-and-controllable-framework-for-layered-image-generation-with-visual-effects/Pasted image 20260514211922.png' | relative_url }})
 
 ---
 ## 2.2 pipeline
-![[博客/读论文/A Unified and Controllable Framework for Layered Image Generation with Visual Effects/Pasted image 20260514211900.png]]
+![]({{ '/assets/images/posts/2026-05-14-a-unified-and-controllable-framework-for-layered-image-generation-with-visual-effects/Pasted image 20260514211900.png' | relative_url }})
 
 mask、fg 和 bg 当成上下文，和 noisy token 拼接在一起。四类 embedding 注入：
-![[博客/读论文/A Unified and Controllable Framework for Layered Image Generation with Visual Effects/Pasted image 20260514222026.png]]
+![]({{ '/assets/images/posts/2026-05-14-a-unified-and-controllable-framework-for-layered-image-generation-with-visual-effects/Pasted image 20260514222026.png' | relative_url }})
 
 $$
 \mathbf{m}_{f,i} = \mathrm{Norm} \left( \mathbf{e}^{\mathrm{time}}(t) + \mathbf{e}^{\mathrm{type}}_{f,i} + \mathbf{e}^{\mathrm{io}}_{f,i} \right)
