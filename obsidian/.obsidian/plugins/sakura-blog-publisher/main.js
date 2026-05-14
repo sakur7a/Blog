@@ -36,6 +36,17 @@ function writeYamlValue(yaml, key, value) {
   return yaml.trim() ? `${yaml.trimEnd()}\n${line}` : line;
 }
 
+function tagsFromYaml(yaml) {
+  const raw = readYamlValue(yaml, "tags");
+  if (!raw || raw === "[]") return [];
+  const match = raw.match(/^\[(.*)\]$/);
+  if (!match) return [];
+  return match[1]
+    .split(",")
+    .map((t) => t.trim().replace(/^["']|["']$/g, ""))
+    .filter(Boolean);
+}
+
 function quoteYaml(value) {
   return `"${String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
@@ -65,7 +76,8 @@ function extractMetadata(content, filePath) {
   const categoryMatch = categories.match(/[\[\s,]([^,\]\s]+)[,\]\s]?/);
   const category = categoryMatch ? categoryMatch[1] : "随笔";
   const coverPosition = readYamlValue(yaml, "cover_position") || "50% 50%";
-  return { title, summary, category, coverPosition };
+  const tags = tagsFromYaml(yaml);
+  return { title, summary, category, tags, coverPosition };
 }
 
 function applyMetadata(content, metadata) {
@@ -74,6 +86,11 @@ function applyMetadata(content, metadata) {
   nextYaml = writeYamlValue(nextYaml, "title", quoteYaml(metadata.title));
   nextYaml = writeYamlValue(nextYaml, "categories", `[${metadata.category}]`);
   nextYaml = writeYamlValue(nextYaml, "summary", quoteYaml(metadata.summary));
+  if (metadata.tags && metadata.tags.length) {
+    nextYaml = writeYamlValue(nextYaml, "tags", `[${metadata.tags.join(", ")}]`);
+  } else {
+    nextYaml = writeYamlValue(nextYaml, "tags", "[]");
+  }
   if (metadata.coverPosition) {
     nextYaml = writeYamlValue(nextYaml, "cover_position", quoteYaml(metadata.coverPosition));
   }
@@ -294,17 +311,21 @@ module.exports = class SakuraBlogPublisher extends Plugin {
     }
   }
 
-  async replaceCoverForPost(post, coverPath) {
+  async replaceCoverForPost(post, coverPath, coverPosition) {
     new Notice(`开始更换封面：${post.title}`);
     try {
-      await this.runNode([
+      const args = [
         "scripts/replace-cover.js",
         "--post",
         post.postPath,
         "--cover",
         coverPath,
         "--skip-tests"
-      ]);
+      ];
+      if (coverPosition) {
+        args.push("--cover-position", coverPosition);
+      }
+      await this.runNode(args);
       new Notice("封面已更换并推送。");
     } catch (error) {
       console.error(error);
@@ -373,8 +394,12 @@ module.exports = class SakuraBlogPublisher extends Plugin {
     return (await this.runNode(["scripts/manage-pages.js", "push"])).trim();
   }
 
-  async setPageHeaderImage(pagePath, imageUrl) {
-    await this.runNode(["scripts/manage-pages.js", "set-header-image", "--page", pagePath, "--image", imageUrl]);
+  async setPageHeaderImage(pagePath, imageUrl, position) {
+    const args = ["scripts/manage-pages.js", "set-header-image", "--page", pagePath, "--image", imageUrl];
+    if (position) {
+      args.push("--position", position);
+    }
+    await this.runNode(args);
   }
 
   async openPageFile(pagePath) {
@@ -942,6 +967,97 @@ class PublishPostModal extends Modal {
   }
 }
 
+class ImagePreviewModal extends Modal {
+  constructor(app, { imagePreviewUrl, currentPosition, mode, onConfirm }) {
+    super(app);
+    this.imagePreviewUrl = imagePreviewUrl;
+    this.position = parseCoverPosition(currentPosition || "50% 50%");
+    this.mode = mode || "cover";
+    this.onConfirm = onConfirm;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.addClass("sakura-publisher-modal");
+    contentEl.empty();
+
+    const titleText = this.mode === "header" ? "调整头部图片位置" : "调整封面位置";
+    contentEl.createEl("h2", { text: titleText });
+
+    const preview = contentEl.createDiv({ cls: "sakura-publisher-cover-preview" });
+    preview.setText("拖动图片，调整焦点区域");
+    preview.style.backgroundImage = `url("${this.imagePreviewUrl}")`;
+    preview.style.backgroundPosition = formatCoverPosition(this.position.x, this.position.y);
+
+    preview.createDiv({ cls: "sakura-publisher-cover-frame" });
+    const marker = preview.createDiv({ cls: "sakura-publisher-cover-marker" });
+
+    const controls = contentEl.createDiv({ cls: "sakura-publisher-cover-controls" });
+    const xInput = this.createRangeControl(controls, "横向焦点", this.position.x);
+    const yInput = this.createRangeControl(controls, "纵向焦点", this.position.y);
+
+    const updateMarker = () => {
+      marker.style.left = `${this.position.x}%`;
+      marker.style.top = `${this.position.y}%`;
+      xInput.input.value = String(this.position.x);
+      yInput.input.value = String(this.position.y);
+      xInput.valueEl.setText(`${this.position.x}%`);
+      yInput.valueEl.setText(`${this.position.y}%`);
+    };
+
+    const setPosition = (x, y) => {
+      this.position = { x: clampPercent(x), y: clampPercent(y) };
+      preview.style.backgroundPosition = formatCoverPosition(this.position.x, this.position.y);
+      updateMarker();
+    };
+
+    xInput.input.addEventListener("input", () => setPosition(xInput.input.value, this.position.y));
+    yInput.input.addEventListener("input", () => setPosition(this.position.x, yInput.input.value));
+
+    const updateFromPointer = (event) => {
+      const rect = preview.getBoundingClientRect();
+      const x = clampPercent(((event.clientX - rect.left) / rect.width) * 100);
+      const y = clampPercent(((event.clientY - rect.top) / rect.height) * 100);
+      setPosition(x, y);
+    };
+
+    preview.addEventListener("pointerdown", (event) => {
+      updateFromPointer(event);
+      preview.setPointerCapture(event.pointerId);
+    });
+    preview.addEventListener("pointermove", (event) => {
+      if (event.buttons === 1) updateFromPointer(event);
+    });
+
+    updateMarker();
+
+    const actions = contentEl.createDiv({ cls: "sakura-publisher-actions" });
+    actions.createEl("button", { text: "取消" }).addEventListener("click", () => this.close());
+
+    const confirmText = this.mode === "header" ? "确认设置" : "确认更换";
+    const confirmBtn = actions.createEl("button", { text: confirmText, cls: "mod-cta" });
+    confirmBtn.addEventListener("click", () => {
+      const pos = formatCoverPosition(this.position.x, this.position.y);
+      this.close();
+      if (this.onConfirm) this.onConfirm(pos);
+    });
+  }
+
+  createRangeControl(parent, label, value) {
+    const row = parent.createDiv({ cls: "sakura-publisher-cover-control" });
+    row.createSpan({ text: label });
+    const input = row.createEl("input", {
+      cls: "sakura-publisher-cover-range",
+      attr: { type: "range", min: "0", max: "100", step: "1", value: String(clampPercent(value)) }
+    });
+    const valueEl = row.createSpan({
+      cls: "sakura-publisher-cover-value",
+      text: `${clampPercent(value)}%`
+    });
+    return { input, valueEl };
+  }
+}
+
 class ManageContentModal extends Modal {
   constructor(app, plugin, options = {}) {
     super(app);
@@ -1342,8 +1458,23 @@ class ManageContentModal extends Modal {
           if (!file) return;
           try {
             const stagedPath = await stageCoverFile(file, this.plugin.settings.blogRoot);
-            await this.plugin.replaceCoverForPost(post, stagedPath);
-            await this.loadPosts();
+            const previewUrl = URL.createObjectURL(file);
+            new ImagePreviewModal(this.app, {
+              imagePreviewUrl: previewUrl,
+              currentPosition: post.coverPosition || "50% 50%",
+              mode: "cover",
+              onConfirm: async (position) => {
+                try {
+                  await this.plugin.replaceCoverForPost(post, stagedPath, position);
+                  await this.loadPosts();
+                } catch (error) {
+                  console.error(error);
+                  new Notice(`更换封面失败：${error.message}`);
+                } finally {
+                  URL.revokeObjectURL(previewUrl);
+                }
+              }
+            }).open();
           } catch (error) {
             console.error(error);
             new Notice(`更换封面失败：${error.message}`);
@@ -1413,10 +1544,25 @@ class ManageContentModal extends Modal {
           const file = input.files && input.files[0];
           if (!file) return;
           try {
-            const imageUrl = await this.stageHeaderImage(file, page.path);
-            await this.plugin.setPageHeaderImage(page.path, imageUrl);
-            new Notice(`头部图片已设置：${imageUrl}`);
-            await this.loadPages();
+            const previewUrl = URL.createObjectURL(file);
+            new ImagePreviewModal(this.app, {
+              imagePreviewUrl: previewUrl,
+              currentPosition: page.coverPosition || "50% 50%",
+              mode: "header",
+              onConfirm: async (position) => {
+                try {
+                  const imageUrl = await this.stageHeaderImage(file, page.path);
+                  await this.plugin.setPageHeaderImage(page.path, imageUrl, position);
+                  new Notice(`头部图片已设置：${imageUrl}`);
+                  await this.loadPages();
+                } catch (error) {
+                  console.error(error);
+                  new Notice(`设置失败：${error.message}`);
+                } finally {
+                  URL.revokeObjectURL(previewUrl);
+                }
+              }
+            }).open();
           } catch (error) {
             console.error(error);
             new Notice(`设置失败：${error.message}`);
