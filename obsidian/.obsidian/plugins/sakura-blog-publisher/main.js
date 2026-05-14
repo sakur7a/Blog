@@ -214,6 +214,13 @@ module.exports = class SakuraBlogPublisher extends Plugin {
       draft.publishPath
     ];
 
+    const isInsideBlog = !draft.relativeDraftPath.startsWith("..") && !path.isAbsolute(draft.relativeDraftPath);
+    if (!isInsideBlog) {
+      const adapter = this.app.vault.adapter;
+      const vaultRoot = adapter.getBasePath ? adapter.getBasePath() : "";
+      if (vaultRoot) args.push("--vault-root", vaultRoot);
+    }
+
     if (metadata.coverPath) {
       args.push("--cover");
       args.push(metadata.coverPath);

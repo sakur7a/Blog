@@ -10,6 +10,7 @@ function parseArgs(argv) {
     coverPosition: "50% 50%",
     date: "",
     slug: "",
+    vaultRoot: "",
     noCommit: false,
     noPush: false,
     skipTests: false
@@ -36,6 +37,9 @@ function parseArgs(argv) {
       options.noCommit = true;
     } else if (arg === "--no-push") {
       options.noPush = true;
+    } else if (arg === "--vault-root") {
+      options.vaultRoot = argv[index + 1] || "";
+      index += 1;
     } else if (arg === "--skip-tests") {
       options.skipTests = true;
     }
@@ -69,6 +73,7 @@ function runPublisher(options) {
   if (options.noCommit) args.push("-NoCommit");
   if (options.noPush) args.push("-NoPush");
   if (options.skipTests) args.push("-SkipTests");
+  if (options.vaultRoot) args.push("-VaultRoot", options.vaultRoot);
   if (options.date) args.push("-DateOverride", options.date);
   if (options.slug) args.push("-SlugOverride", options.slug);
   if (options.cover) {

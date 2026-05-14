@@ -4,6 +4,8 @@ param(
 
 [string]$CoverPath,
 
+[string]$VaultRoot,
+
 [string]$CoverPosition = "50% 50%",
 
 [string]$DateOverride,
@@ -79,11 +81,15 @@ function Resolve-AttachmentPath {
   param(
     [string]$Reference,
     [string]$DraftDirectory,
-    [string]$Root
+    [string]$Root,
+    [string]$VaultRoot
   )
 
   $candidates = @()
   $candidates += Join-Path $DraftDirectory $Reference
+  if ($VaultRoot) {
+    $candidates += Join-Path $VaultRoot $Reference
+  }
   $candidates += Join-Path $Root "obsidian/Attachments/$Reference"
   $candidates += Join-Path $Root $Reference
 
@@ -97,6 +103,13 @@ function Resolve-AttachmentPath {
   $found = Get-ChildItem -Path (Join-Path $Root "obsidian") -Recurse -File -Filter $fileName -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($found) {
     return $found.FullName
+  }
+
+  if ($VaultRoot) {
+    $found = Get-ChildItem -Path $VaultRoot -Recurse -File -Filter $fileName -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($found) {
+      return $found.FullName
+    }
   }
 
   return $null
@@ -201,7 +214,7 @@ if (-not [string]::IsNullOrWhiteSpace($CoverPath)) {
 $body = [regex]::Replace($body, '!\[\[([^\]]+)\]\]', {
   param($match)
   $reference = ($match.Groups[1].Value -split '\|')[0]
-  $source = Resolve-AttachmentPath -Reference $reference -DraftDirectory $draftDirectory -Root $root
+  $source = Resolve-AttachmentPath -Reference $reference -DraftDirectory $draftDirectory -Root $root -VaultRoot $VaultRoot
   if (-not $source) {
     Write-Warning "Image not found: $reference"
     return $match.Value
@@ -218,7 +231,7 @@ $body = [regex]::Replace($body, '!\[([^\]]*)\]\(([^)]+)\)', {
   if ($reference -match '^(https?:)?//|^\{\{') {
     return $match.Value
   }
-  $source = Resolve-AttachmentPath -Reference $reference -DraftDirectory $draftDirectory -Root $root
+  $source = Resolve-AttachmentPath -Reference $reference -DraftDirectory $draftDirectory -Root $root -VaultRoot $VaultRoot
   if (-not $source) {
     Write-Warning "Image not found: $reference"
     return $match.Value
