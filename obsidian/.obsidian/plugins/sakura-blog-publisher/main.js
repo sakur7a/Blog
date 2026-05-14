@@ -1742,6 +1742,63 @@ class DeletePostModal extends Modal {
   }
 }
 
+class EditTagsModal extends Modal {
+  constructor(app, plugin, post, manager) {
+    super(app);
+    this.plugin = plugin;
+    this.post = post;
+    this.manager = manager;
+    this.tagsInput = (post.tags || []).join(", ");
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.addClass("sakura-publisher-modal");
+    contentEl.empty();
+    contentEl.createEl("h2", { text: "编辑标签" });
+    contentEl.createEl("p", { text: this.post.title || this.post.postPath });
+
+    new Setting(contentEl)
+      .setName("标签")
+      .setDesc("用逗号或空格分隔多个标签")
+      .addText((text) => {
+        text
+          .setPlaceholder("标签1, 标签2")
+          .setValue(this.tagsInput)
+          .onChange((value) => {
+            this.tagsInput = value;
+          });
+      });
+
+    const actions = contentEl.createDiv({ cls: "sakura-publisher-actions" });
+    actions.createEl("button", { text: "取消" }).addEventListener("click", () => this.close());
+
+    const confirmBtn = actions.createEl("button", { text: "保存并推送", cls: "mod-cta" });
+    confirmBtn.addEventListener("click", async () => {
+      const tags = this.tagsInput
+        .split(/[,，\s]+/)
+        .map((t) => t.trim())
+        .filter(Boolean);
+      this.close();
+      try {
+        await this.plugin.runNode([
+          "scripts/manage-post.js",
+          "edit-tags",
+          "--post",
+          this.post.postPath,
+          "--tags",
+          tags.join(", ")
+        ]);
+        new Notice("标签已更新并推送。");
+        if (this.manager) await this.manager.loadPosts();
+      } catch (error) {
+        console.error(error);
+        new Notice(`更新标签失败：${error.message}`);
+      }
+    });
+  }
+}
+
 class SakuraPublisherSettingTab extends PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
