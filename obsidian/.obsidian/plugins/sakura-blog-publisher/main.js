@@ -1174,6 +1174,7 @@ class ManageContentModal extends Modal {
       title: this.draft.metadata.title || "",
       summary: this.draft.metadata.summary || "",
       category: CATEGORIES.includes(this.draft.metadata.category) ? this.draft.metadata.category : "随笔",
+      tags: this.draft.metadata.tags || [],
       coverPath: "",
       coverPosition: this.draft.metadata.coverPosition || "50% 50%"
     };
@@ -1209,6 +1210,21 @@ class ManageContentModal extends Modal {
           .setValue(this.publishMeta.summary)
           .onChange((value) => { this.publishMeta.summary = value.trim(); });
         text.inputEl.addClass("sakura-publisher-summary-input");
+      });
+
+    new Setting(this.publishContainer)
+      .setName("标签")
+      .setDesc("用逗号或空格分隔")
+      .addText((text) => {
+        text
+          .setPlaceholder("标签1, 标签2")
+          .setValue(this.publishMeta.tags.join(", "))
+          .onChange((value) => {
+            this.publishMeta.tags = value
+              .split(/[,，\s]+/)
+              .map((t) => t.trim())
+              .filter(Boolean);
+          });
       });
 
     const coverSetting = new Setting(this.publishContainer)
@@ -1275,6 +1291,15 @@ class ManageContentModal extends Modal {
       cls: `sakura-manager-badge sakura-manager-badge--${this.publishMeta.category === "学习" ? "study" : "essay"}`,
       text: this.publishMeta.category
     });
+    if (this.publishMeta.tags && this.publishMeta.tags.length) {
+      this.publishMeta.tags.forEach(function (tag) {
+        meta.createSpan({
+          cls: "sakura-manager-badge",
+          text: tag,
+          attr: { style: "background: rgba(139,92,246,0.12); color: rgb(139,92,246);" }
+        });
+      });
+    }
     meta.createSpan({ text: this.publishMeta.summary || "暂无简介" });
 
     const bodyEl = this.previewSection.createDiv({ cls: "sakura-publish-preview-body" });
@@ -1425,7 +1450,7 @@ class ManageContentModal extends Modal {
 
   renderPosts() {
     this.listEl.empty();
-    const filtered = this.filterList(this.posts, ["title", "summary", "slug"]);
+    const filtered = this.filterList(this.posts, ["title", "summary", "slug", "tags"]);
     const sorted = this.sortPosts(filtered);
 
     if (!this.posts.length) {
@@ -1451,6 +1476,17 @@ class ManageContentModal extends Modal {
       meta.createSpan({ text: post.date || "无日期" });
       if (post.summary) {
         meta.createSpan({ text: post.summary });
+      }
+
+      if (post.tags && post.tags.length) {
+        const tagsEl = card.createDiv({ cls: "sakura-manager-card-meta" });
+        post.tags.forEach(function (tag) {
+          tagsEl.createSpan({
+            cls: "sakura-manager-badge",
+            text: tag,
+            attr: { style: "background: rgba(139,92,246,0.12); color: rgb(139,92,246);" }
+          });
+        });
       }
 
       const actions = card.createDiv({ cls: "sakura-manager-card-actions" });
@@ -1503,6 +1539,11 @@ class ManageContentModal extends Modal {
           }
         });
         input.click();
+      });
+
+      const tagsButton = actions.createEl("button", { text: "编辑标签" });
+      tagsButton.addEventListener("click", () => {
+        new EditTagsModal(this.app, this.plugin, post, this).open();
       });
 
       const deleteButton = actions.createEl("button", { text: "删除" });
