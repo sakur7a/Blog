@@ -13,7 +13,7 @@ body_id: post
   {% if page.tags.size > 0 %}
   <p class="post-tags">
     {% for tag in page.tags %}
-      <a href="{{ '/tags/' | append: tag | relative_url }}" class="tag-chip">{{ tag }}</a>
+      <a href="{{ '/tags/' | relative_url }}#{{ tag }}" class="tag-chip">{{ tag }}</a>
     {% endfor %}
   </p>
   {% endif %}

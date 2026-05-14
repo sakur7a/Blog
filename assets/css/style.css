@@ -822,6 +822,17 @@ body#post #main {
   margin-bottom: 32px;
 }
 
+.tags-page-header h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.tags-page-header p {
+  margin: 0;
+  color: var(--muted);
+}
+
 .tag-cloud {
   display: flex;
   flex-wrap: wrap;

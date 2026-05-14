@@ -539,7 +539,9 @@
     event.preventDefault();
     var tag = item.getAttribute("data-tag");
     var current = cloud.querySelector(".tag-cloud-item.active");
-    activateTag(current && current.getAttribute("data-tag") === tag ? "" : tag);
+    var next = current && current.getAttribute("data-tag") === tag ? "" : tag;
+    activateTag(next);
+    history.replaceState(null, "", next ? "#" + tag : window.location.pathname);
   });
 
   // Auto-activate from hash
