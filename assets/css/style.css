@@ -840,7 +840,7 @@ body#post #main {
   color: var(--text);
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
 .tag-cloud-item:hover,
