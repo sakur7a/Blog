@@ -514,3 +514,35 @@
   document.head.appendChild(script);
   window.setTimeout(scheduleMathCopyEnhancement, 600);
 })();
+
+// Tags page filtering
+(function () {
+  var cloud = document.querySelector(".tag-cloud");
+  var groups = document.querySelectorAll(".tag-group");
+  if (!cloud || !groups.length) return;
+
+  var items = cloud.querySelectorAll(".tag-cloud-item");
+
+  function activateTag(tag) {
+    items.forEach(function (item) {
+      item.classList.toggle("active", item.getAttribute("data-tag") === tag);
+    });
+    groups.forEach(function (group) {
+      group.hidden = tag && group.getAttribute("data-tag") !== tag;
+    });
+  }
+
+  cloud.addEventListener("click", function (event) {
+    var item = event.target.closest(".tag-cloud-item");
+    if (!item) return;
+    event.preventDefault();
+    var tag = item.getAttribute("data-tag");
+    var current = cloud.querySelector(".tag-cloud-item.active");
+    activateTag(current && current.getAttribute("data-tag") === tag ? "" : tag);
+  });
+
+  // Auto-activate from hash
+  if (window.location.hash) {
+    activateTag(decodeURIComponent(window.location.hash.slice(1)));
+  }
+})();
