@@ -94,10 +94,52 @@ function deletePost(root = path.resolve(__dirname, ".."), postPath, options = {}
   }
 }
 
+function editTags(root = path.resolve(__dirname, ".."), postPath, tagsInput, options = {}) {
+  const { fullPath, relative } = normalizePostPath(root, postPath);
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`Post does not exist: ${relative}`);
+  }
+
+  const content = fs.readFileSync(fullPath, "utf8").replace(/^﻿/, "");
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  if (!match) throw new Error("No front matter found");
+
+  const yaml = match[1];
+  const body = match[2];
+
+  const tags = tagsInput
+    .split(/[,，\s]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  const tagsYaml = `[${tags.join(", ")}]`;
+
+  const pattern = /^tags:\s*.+?$/m;
+  let nextYaml;
+  if (pattern.test(yaml)) {
+    nextYaml = yaml.replace(pattern, `tags: ${tagsYaml}`);
+  } else {
+    nextYaml = yaml.trimEnd() + `\ntags: ${tagsYaml}`;
+  }
+
+  const nextContent = `---\n${nextYaml.trim()}\n---\n${body}`;
+  fs.writeFileSync(fullPath, nextContent, "utf8");
+
+  if (!options.noCommit) {
+    run(root, "git", ["add", relative], { inherit: true });
+    run(root, "git", ["commit", "-m", `post: update tags for ${path.basename(relative, ".md")}`], { inherit: true });
+    if (!options.noPush) {
+      run(root, "git", ["-c", "http.sslBackend=openssl", "push", "origin", "main"], { inherit: true });
+    }
+  }
+
+  return { postPath: relative, tags };
+}
+
 function parseArgs(argv) {
   const options = {
     command: argv[0] || "",
     post: "",
+    tags: "",
     deleteAssets: false,
     noCommit: false,
     noPush: false,
@@ -120,6 +162,9 @@ function parseArgs(argv) {
       options.skipBuild = true;
     } else if (arg === "--skip-tests") {
       options.skipTests = true;
+    } else if (arg === "--tags") {
+      options.tags = argv[index + 1] || "";
+      index += 1;
     }
   }
 
@@ -129,9 +174,15 @@ function parseArgs(argv) {
 if (require.main === module) {
   try {
     const options = parseArgs(process.argv.slice(2));
-    if (options.command !== "delete") throw new Error("Usage: node scripts/manage-post.js delete --post _posts/YYYY-MM-DD-slug.md");
-    const result = deletePost(path.resolve(__dirname, ".."), options.post, options);
-    process.stdout.write(JSON.stringify(result, null, 2));
+    if (options.command === "delete") {
+      const result = deletePost(path.resolve(__dirname, ".."), options.post, options);
+      process.stdout.write(JSON.stringify(result, null, 2));
+    } else if (options.command === "edit-tags") {
+      const result = editTags(path.resolve(__dirname, ".."), options.post, options.tags || "", options);
+      process.stdout.write(JSON.stringify(result, null, 2));
+    } else {
+      throw new Error("Usage: node scripts/manage-post.js <delete|edit-tags> --post _posts/YYYY-MM-DD-slug.md");
+    }
   } catch (error) {
     console.error(error.message);
     process.exit(1);
@@ -141,6 +192,7 @@ if (require.main === module) {
 module.exports = {
   assetPathForPost,
   deletePost,
+  editTags,
   normalizePostPath,
   parseArgs
 };
