@@ -140,7 +140,8 @@
     }
 
     render((index || []).filter(function (item) {
-      return (item.title + " " + item.summary).toLowerCase().indexOf(query) !== -1;
+      var tags = Array.isArray(item.tags) ? item.tags.join(" ") : "";
+      return (item.title + " " + item.summary + " " + tags).toLowerCase().indexOf(query) !== -1;
     }));
   }
 
