@@ -4,7 +4,7 @@ categories: [随笔]
 summary: "读论文day1"
 tags: [多图层, diffusion, RL]
 cover_position: "50% 50%"
-date: 2026-05-18 23:49:28 +0800
+date: 2026-05-18 23:52:57 +0800
 slug: creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers
 cover: "/assets/images/posts/2026-05-18-creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers/cover.jpg"
 ---
