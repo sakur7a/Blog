@@ -1,6 +1,6 @@
 ---
 title: "CreatiParser：Generative Image Parsing of Raster Graphic Designs into Editable Layers"
-categories: [随笔]
+categories: [学习]
 summary: "读论文day1"
 tags: [多图层, diffusion, RL]
 cover_position: "50% 50%"
@@ -107,10 +107,11 @@ $$ T^{(c)},T^{(b)},T^{(s)} \in \mathbb{R}^{N\times d} $$作者不是把所有 3N
 ## 2.3 数据集和评估
 
 ### 2.3.1 数据集设置
-| 数据集 | 用途 | 说明 |
-| ---- | ---- | ---- |
-| Parser-40K | 训练与测试 | 作者自建，来源于专业设计平台和授权 stock design libraries，原始 PSD 提供 native layer decomposition |
-| Crello | zero-shot 测试 | 训练时不用，直接测试跨风格泛化 |
+
+| 数据集        | 用途           | 说明                                                                            |
+| ---------- | ------------ | ----------------------------------------------------------------------------- |
+| Parser-40K | 训练与测试        | 作者自建，来源于专业设计平台和授权 stock design libraries，原始 PSD 提供 native layer decomposition |
+| Crello     | zero-shot 测试 | 训练时不用，直接测试跨风格泛化                                                               |
 
 ---
 ### 2.3.2 评估指标
