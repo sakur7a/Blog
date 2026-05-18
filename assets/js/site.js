@@ -5,29 +5,37 @@
   var root = document.documentElement;
   var storageKey = "sakura-theme";
 
+  var moonPath = "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z";
+  var sunPath = "M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42";
+
   function storedTheme() {
-    try {
-      return localStorage.getItem(storageKey);
-    } catch (error) {
-      return "";
-    }
+    try { return localStorage.getItem(storageKey); }
+    catch (error) { return ""; }
   }
 
   function saveTheme(theme) {
-    try {
-      localStorage.setItem(storageKey, theme);
-    } catch (error) {}
+    try { localStorage.setItem(storageKey, theme); }
+    catch (error) {}
   }
 
   function currentTheme() {
     return root.getAttribute("data-theme") || storedTheme() || "light";
   }
 
+  function setIcon(theme) {
+    var icon = document.getElementById("J_theme_icon");
+    if (!icon) return;
+    var path = icon.querySelector("path");
+    if (!path) return;
+    var isDark = theme === "dark";
+    path.setAttribute("d", isDark ? sunPath : moonPath);
+    toggle.setAttribute("aria-label", isDark ? "切换浅色模式" : "切换深色模式");
+    toggle.setAttribute("title", isDark ? "切换浅色模式" : "切换深色模式");
+  }
+
   function applyTheme(theme) {
     root.setAttribute("data-theme", theme);
-    toggle.textContent = theme === "dark" ? "Light" : "Dark";
-    toggle.setAttribute("aria-label", theme === "dark" ? "切换浅色模式" : "切换深色模式");
-    toggle.setAttribute("title", theme === "dark" ? "切换浅色模式" : "切换深色模式");
+    setIcon(theme);
   }
 
   applyTheme(currentTheme());
@@ -96,8 +104,29 @@
   window.requestAnimationFrame(tick);
 })();
 
+/* Header scroll hide (matches tw93) */
 (function () {
-  var open = document.getElementById("J_search_open");
+  var header = document.getElementById("J_header");
+  if (!header) return;
+
+  var isMobile = /Android|iPhone|Windows Phone|iPad|iPod/.test(navigator.userAgent);
+  if (isMobile) return;
+
+  var before = document.documentElement.scrollTop;
+  window.addEventListener("scroll", function () {
+    var after = document.documentElement.scrollTop;
+    var delta = after - before;
+    if (delta > 0 && after > 0) {
+      header.classList.add("header-menu-overflow");
+    } else {
+      header.classList.remove("header-menu-overflow");
+    }
+    before = after;
+  }, { passive: true });
+})();
+
+(function () {
+  var open = document.getElementById("search-btn");
   var close = document.getElementById("J_search_close");
   var panel = document.getElementById("J_search_panel");
   var input = document.getElementById("J_search_input");
