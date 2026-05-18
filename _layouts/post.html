@@ -3,32 +3,34 @@ layout: base
 body_id: post
 ---
 
-<article class="post-content hentry">
-  <h1 class="post-title entry-title">{{ page.title }}</h1>
-  {% if page.cover %}
-  <div class="post-cover" style="background-image: url('{{ page.cover | relative_url }}'); background-position: {{ page.cover_position | default: '50% 50%' }};"></div>
-  {% endif %}
-  <p class="page-info">
-    <span>{{ page.categories | join: " / " | default: "Notes" }}</span>
-    <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y-%m-%d" }}</time>
-  </p>
-
-  {% if page.tags.size > 0 %}
-  <p class="post-tags">
-    {% for tag in page.tags %}
-      <a href="{{ '/tags/' | relative_url }}#{{ tag }}" class="tag-chip">{{ tag }}</a>
-    {% endfor %}
-  </p>
-  {% endif %}
-
-  <div class="post-body-layout">
-    <aside class="post-toc" aria-labelledby="post-toc-title" hidden>
-      <h2 id="post-toc-title">文章目录</h2>
-      <nav id="post-toc-nav" aria-label="文章目录"></nav>
-    </aside>
-
+<div class="post-shell">
+  <article class="hentry">
     <div class="entry-content" id="post-content">
+      <h1 class="post-title entry-title">{{ page.title }}</h1>
+      {% if page.cover %}
+      <div class="post-cover" style="background-image: url('{{ page.cover | relative_url }}'); background-position: {{ page.cover_position | default: '50% 50%' }};"></div>
+      {% endif %}
+      <div class="page-info">
+        <span>{{ page.categories | join: " / " | default: "Notes" }}</span>
+        <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y-%m-%d" }}</time>
+      </div>
+
+      {% if page.tags.size > 0 %}
+      <div class="post-tags">
+        {% for tag in page.tags %}
+          <a href="{{ '/tags/' | relative_url }}#{{ tag }}" class="tag-chip">{{ tag }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
       {{ content }}
     </div>
-  </div>
-</article>
+  </article>
+
+  <aside class="post-toc" aria-labelledby="post-toc-title" hidden>
+    <div class="post-toc-inner">
+      <h2 id="post-toc-title">文章目录</h2>
+      <nav id="post-toc-nav" aria-label="文章目录"></nav>
+    </div>
+  </aside>
+</div>

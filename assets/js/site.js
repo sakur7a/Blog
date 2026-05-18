@@ -232,6 +232,7 @@
 
   nav.appendChild(list);
   toc.hidden = false;
+  document.body.classList.add("has-post-toc");
 
   function setActive(activeLink) {
     links.forEach(function (link) {
