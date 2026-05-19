@@ -6,7 +6,6 @@ tags: [多图层, diffusion, RL]
 cover_position: "50% 50%"
 date: 2026-05-18 23:59:37 +0800
 slug: creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers
-cover: "/assets/images/posts/2026-05-18-creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers/cover.jpg"
 ---
 
 # 一、信息
