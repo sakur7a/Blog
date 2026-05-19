@@ -182,6 +182,17 @@ if ([string]::IsNullOrWhiteSpace($slug)) {
   $slug = Convert-ToSlug -Value $title
 }
 
+# If a post with the same slug already exists, reuse its date prefix
+# so re-publishing updates the same file instead of creating a duplicate.
+$existing = Get-ChildItem -Path (Join-Path $root "_posts") -File -Filter "*-$slug.md" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($existing) {
+  $existingPrefix = if ($existing.BaseName -match "^(\d{4}-\d{2}-\d{2})-") { $Matches[1] } else { $null }
+  if ($existingPrefix) {
+    $datePrefix = $existingPrefix
+    Write-Host "Found existing post with same slug, reusing date prefix: $datePrefix"
+  }
+}
+
 $summary = Get-YamlValue -Yaml $yaml -Key "summary"
 if ([string]::IsNullOrWhiteSpace($summary)) {
   $plain = ($body -replace '(?s)!\[\[.*?\]\]', '' -replace '(?s)!\[.*?\]\(.*?\)', '' -replace '[#>*_\[\]-]', '').Trim()
