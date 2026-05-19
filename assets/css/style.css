@@ -325,7 +325,12 @@ body#page #main {
 }
 
 /* ── Home page post list (matches tw93 #post-index) ── */
+body#post-index {
+  background: var(--paper);
+}
+
 #post-index #main {
+  width: auto;
   margin: 60px 0 0 0;
   overflow: hidden;
   background: var(--paper);
