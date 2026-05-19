@@ -408,25 +408,33 @@ body#page #main {
   font-size: 17px;
   text-autospace: ideograph-alpha ideograph-numeric;
   word-wrap: break-word;
+}
+
+/* Card styling only for article pages (matches tw93: #post / #page) */
+#post .entry-content,
+#page .entry-content {
   margin-bottom: 15px;
   padding: 10px 15px;
   background: var(--panel);
 }
 
 @media (min-width: 768px) {
-  .entry-content {
+  #post .entry-content,
+  #page .entry-content {
     max-width: 900px;
     margin: 34px auto;
     padding: 32px 50px 70px;
     border-radius: 8px;
   }
-  .entry-content > p:first-of-type {
+  #post .entry-content > p:first-of-type,
+  #page .entry-content > p:first-of-type {
     font-size: 20px;
   }
 }
 
 @media (min-width: 1000px) {
-  .entry-content {
+  #post .entry-content,
+  #page .entry-content {
     padding: 32px 80px 70px;
   }
 }
@@ -1097,7 +1105,8 @@ body#page #main {
     margin: 0;
   }
 
-  .entry-content {
+  #post .entry-content,
+  #page .entry-content {
     border-radius: 0;
     margin-bottom: 15px;
     padding: 10px 15px;
