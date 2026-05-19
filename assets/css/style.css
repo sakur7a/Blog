@@ -393,20 +393,19 @@ body#page #main {
 
 @media (min-width: 768px) {
   .entry-content {
-    margin: 30px 10px;
-    padding: 20px 30px;
+    max-width: 900px;
+    margin: 34px auto;
+    padding: 32px 50px 70px;
     border-radius: 8px;
+  }
+  .entry-content > p:first-of-type {
+    font-size: 20px;
   }
 }
 
 @media (min-width: 1000px) {
   .entry-content {
-    max-width: 900px;
-    margin: 34px auto;
     padding: 32px 80px 70px;
-  }
-  .entry-content > p:first-of-type {
-    font-size: 20px;
   }
 }
 
@@ -427,9 +426,14 @@ body#page #main {
   display: none;
 }
 
-.has-post-toc .post-toc {
-  display: block;
+/* Mobile: TOC shown above content as collapsible block */
+@media (max-width: 640px) {
+  .has-post-toc .post-toc {
+    display: block;
+  }
 }
+
+/* Medium: hide TOC (matches tw93 — only show on wide screens) */
 
 .post-toc h2 {
   margin: 0 0 12px;
