@@ -218,7 +218,7 @@
 
   if (!content || !toc || !nav) return;
 
-  var headings = Array.prototype.slice.call(content.querySelectorAll("h2, h3"));
+  var headings = Array.prototype.slice.call(content.querySelectorAll("h2, h3, h4"));
   if (!headings.length) return;
 
   function slugify(value, index) {
@@ -246,7 +246,14 @@
     heading.setAttribute("tabindex", "-1");
 
     var item = document.createElement("li");
-    item.className = heading.tagName.toLowerCase() === "h3" ? "toc-level-3" : "toc-level-2";
+    var tag = heading.tagName.toLowerCase();
+    if (tag === "h4") {
+      item.className = "toc-level-4";
+    } else if (tag === "h3") {
+      item.className = "toc-level-3";
+    } else {
+      item.className = "toc-level-2";
+    }
 
     var link = document.createElement("a");
     link.href = "#" + id;

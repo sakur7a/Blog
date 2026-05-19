@@ -517,6 +517,12 @@ body#post-index {
   font-weight: 500;
 }
 
+.post-toc .toc-level-4 {
+  padding-left: 32px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .post-title {
   margin: 6px 0 10px;
   color: var(--strong);
