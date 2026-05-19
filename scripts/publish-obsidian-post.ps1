@@ -82,7 +82,8 @@ function Resolve-AttachmentPath {
     [string]$Reference,
     [string]$DraftDirectory,
     [string]$Root,
-    [string]$VaultRoot
+    [string]$VaultRoot,
+    [string]$AssetDir
   )
 
   $candidates = @()
@@ -91,6 +92,9 @@ function Resolve-AttachmentPath {
     $candidates += Join-Path $VaultRoot $Reference
   }
   $candidates += Join-Path $Root "obsidian/Attachments/$Reference"
+  if ($AssetDir) {
+    $candidates += Join-Path $AssetDir $Reference
+  }
   $candidates += Join-Path $Root $Reference
 
   foreach ($candidate in $candidates) {
@@ -100,6 +104,11 @@ function Resolve-AttachmentPath {
   }
 
   $fileName = Split-Path $Reference -Leaf
+  $found = Get-ChildItem -Path (Join-Path $Root "assets/images/posts") -Recurse -File -Filter $fileName -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($found) {
+    return $found.FullName
+  }
+
   $found = Get-ChildItem -Path (Join-Path $Root "obsidian") -Recurse -File -Filter $fileName -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($found) {
     return $found.FullName
@@ -214,13 +223,16 @@ if (-not [string]::IsNullOrWhiteSpace($CoverPath)) {
 $body = [regex]::Replace($body, '!\[\[([^\]]+)\]\]', {
   param($match)
   $reference = ($match.Groups[1].Value -split '\|')[0]
-  $source = Resolve-AttachmentPath -Reference $reference -DraftDirectory $draftDirectory -Root $root -VaultRoot $VaultRoot
+  $source = Resolve-AttachmentPath -Reference $reference -DraftDirectory $draftDirectory -Root $root -VaultRoot $VaultRoot -AssetDir $assetDir
   if (-not $source) {
     Write-Warning "Image not found: $reference"
     return $match.Value
   }
   $name = Split-Path $source -Leaf
-  Copy-Item -LiteralPath $source -Destination (Join-Path $assetDir $name) -Force
+  $dest = Join-Path $assetDir $name
+  if ((Resolve-Path -LiteralPath $source).Path -ne (Resolve-Path -LiteralPath $dest -ErrorAction SilentlyContinue).Path) {
+    Copy-Item -LiteralPath $source -Destination $dest -Force
+  }
   return "![]({{ '/$assetDirRelative/$name' | relative_url }})"
 })
 
@@ -231,13 +243,16 @@ $body = [regex]::Replace($body, '!\[([^\]]*)\]\(([^)]+)\)', {
   if ($reference -match '^(https?:)?//|^\{\{') {
     return $match.Value
   }
-  $source = Resolve-AttachmentPath -Reference $reference -DraftDirectory $draftDirectory -Root $root -VaultRoot $VaultRoot
+  $source = Resolve-AttachmentPath -Reference $reference -DraftDirectory $draftDirectory -Root $root -VaultRoot $VaultRoot -AssetDir $assetDir
   if (-not $source) {
     Write-Warning "Image not found: $reference"
     return $match.Value
   }
   $name = Split-Path $source -Leaf
-  Copy-Item -LiteralPath $source -Destination (Join-Path $assetDir $name) -Force
+  $dest = Join-Path $assetDir $name
+  if ((Resolve-Path -LiteralPath $source).Path -ne (Resolve-Path -LiteralPath $dest -ErrorAction SilentlyContinue).Path) {
+    Copy-Item -LiteralPath $source -Destination $dest -Force
+  }
   return "![$alt]({{ '/$assetDirRelative/$name' | relative_url }})"
 })
 
@@ -251,7 +266,10 @@ Set-Content -LiteralPath $postPath -Value $published -Encoding UTF8
 $publishedDir = Join-Path $root "obsidian/Published"
 New-Item -ItemType Directory -Force -Path $publishedDir | Out-Null
 $publishedRelative = "obsidian/Published/$(Split-Path $draftFullPath -Leaf)"
-Copy-Item -LiteralPath $draftFullPath -Destination (Join-Path $root $publishedRelative) -Force
+$publishedFullPath = Join-Path $root $publishedRelative
+if ((Resolve-Path -LiteralPath $draftFullPath).Path -ne (Resolve-Path -LiteralPath $publishedFullPath -ErrorAction SilentlyContinue).Path) {
+  Copy-Item -LiteralPath $draftFullPath -Destination $publishedFullPath -Force
+}
 
 if ($NoCommit -and $NoPush) {
   Write-PreviewManifest -Root $root -Paths @(
