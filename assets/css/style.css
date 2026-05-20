@@ -465,14 +465,7 @@ body#post-index {
   display: none;
 }
 
-/* Mobile: TOC shown above content as collapsible block */
-@media (max-width: 640px) {
-  .has-post-toc .post-toc {
-    display: block;
-  }
-}
-
-/* Medium: hide TOC (matches tw93 — only show on wide screens) */
+/* TOC only visible on wide screens (matches tw93: display only at 88em+) */
 
 .post-toc h2 {
   margin: 0 0 12px;
@@ -1122,27 +1115,20 @@ body#post-index {
   body#post #main,
   body#page #main {
     width: auto;
-    margin: 16px 0 48px;
+    margin: 60px 0 0 0;
+  }
+
+  #post .hentry,
+  #page .hentry {
+    background: var(--paper);
+    padding-top: 15px;
   }
 
   #post .entry-content,
   #page .entry-content {
     border-radius: 0;
-    margin-top: 0;
     margin-bottom: 15px;
     padding: 10px 15px;
-  }
-
-  .has-post-toc .post-toc {
-    display: block;
-    margin: 0 15px 28px;
-    padding: 14px 0 16px;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-  }
-
-  .has-post-toc .post-toc-inner {
-    position: static;
   }
 
   .entry-title {
