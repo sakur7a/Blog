@@ -21,7 +21,8 @@ $ErrorActionPreference = "Stop"
 
 function Convert-ToSlug {
   param([string]$Value)
-  $slug = $Value.ToLowerInvariant()
+  $words = ($Value.ToLowerInvariant() -split "[^\p{Ll}\p{Lu}\p{Nd}]+" | Where-Object { $_ })
+  $slug = ($words | Select-Object -First 6) -join "-"
   $slug = $slug -replace "[^\p{Ll}\p{Lu}\p{Nd}]+", "-"
   $slug = $slug.Trim("-")
   if ([string]::IsNullOrWhiteSpace($slug)) {
