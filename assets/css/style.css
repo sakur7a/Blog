@@ -1114,23 +1114,27 @@ body#post-index {
     margin-top: 42px;
   }
 
+  body#post,
+  body#page {
+    background: var(--bg);
+  }
+
   body#post #main,
   body#page #main {
     width: auto;
-    margin: 0;
+    margin: 16px 0 48px;
   }
 
   #post .entry-content,
   #page .entry-content {
     border-radius: 0;
+    margin-top: 0;
     margin-bottom: 15px;
     padding: 10px 15px;
   }
 
   .has-post-toc .post-toc {
     display: block;
-    max-height: 220px;
-    overflow-y: auto;
     margin: 0 15px 28px;
     padding: 14px 0 16px;
     border-top: 1px solid var(--line);
