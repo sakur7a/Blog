@@ -1,12 +1,12 @@
-﻿---
+---
 title: "CreatiParser：Generative Image Parsing of Raster Graphic Designs into Editable Layers"
 categories: [学习]
 summary: "读论文day1"
 tags: [多图层, diffusion, RL]
 cover_position: "50% 50%"
 date: 2026-05-19 19:41:34 +0800
-slug: creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers
-cover: "/assets/images/posts/2026-05-19-creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers/cover.jpg"
+slug: creatiparser
+cover: "/assets/images/posts/2026-05-19-creatiparser/cover.jpg"
 ---
 
 # 一、信息
@@ -33,13 +33,13 @@ $$
 | $L_{\text{sticker}}$    | RGBA 图像 | 非文字前景元素，例如线条、图标、几何形状、装饰元素 |
 | $L_{\text{background}}$ | RGB 图像  | 全局背景、纹理、底色、摄影图像等          |
 
-![]({{ '/assets/images/posts/2026-05-19-creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers/Pasted image 20260518225912.png' | relative_url }})
-![]({{ '/assets/images/posts/2026-05-19-creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers/Pasted image 20260518234110.png' | relative_url }})
+![]({{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518225912.png' | relative_url }})
+![]({{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518234110.png' | relative_url }})
 
 ---
 ## 2.2 pipeline
 
-![]({{ '/assets/images/posts/2026-05-19-creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers/Pasted image 20260518225954.png' | relative_url }})
+![]({{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518225954.png' | relative_url }})
 
 1. VLM-based Text Layer Parsing：用 Qwen3-VL + LoRA 从图像预测文本渲染协议 JSON，再用渲染引擎生成文字层。
 2. Multi-branch Diffusion for Background and Sticker：用三分支 SDXL U-Net 生成背景和贴纸，支持 RGBA 透明图层。
@@ -161,7 +161,7 @@ $$
 
 ---
 #### 2.2.2.1 LTA(Layer Token Attention)
-![]({{ '/assets/images/posts/2026-05-19-creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers/Pasted image 20260518233418.png' | relative_url }})
+![]({{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518233418.png' | relative_url }})
 假设三个分支在同一空间位置都有 token：
 
 $$
@@ -193,7 +193,7 @@ $$
 1. Layer Reconstruction Accuracy：Text IoU 和 Sticker IoU。
 2. Text Editability：Font Accuracy 和 Attribute Accuracy。Font 是字体 ID exact match；Attr 是其他外观和关系字段的平均准确率。
 3. Pixel-Level Reconstruction：分别计算 text、sticker、background 的 RGB L1，以及平均值。
-![]({{ '/assets/images/posts/2026-05-19-creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers/Pasted image 20260518234127.png' | relative_url }})
+![]({{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518234127.png' | relative_url }})
 
 ---
 ### 2.3.3 对比方法
@@ -201,6 +201,6 @@ $$
 - LayerD：matting-first，再做 background completion。
 - 由于不同方法和 Crello 的图层 taxonomy 不一致，作者用 GPT-4V 做自动层类别归一化，并用 200 个样本人工验证，报告总体分类准确率 94.5%。
 
-![]({{ '/assets/images/posts/2026-05-19-creatiparser-generative-image-parsing-of-raster-graphic-designs-into-editable-layers/Pasted image 20260518234141.png' | relative_url }})
+![]({{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518234141.png' | relative_url }})
 
 
