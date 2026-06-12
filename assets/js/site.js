@@ -419,54 +419,6 @@
   }
 
 
-  /* Selective copy: only replace MathJax with LaTeX, leave everything else natural */
-  content.addEventListener("copy", function (event) {
-    var selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
-
-    var range = selection.getRangeAt(0);
-    if (!range.intersectsNode(content)) return;
-
-    var fragment = range.cloneContents();
-    var holder = document.createElement("div");
-    holder.appendChild(fragment);
-
-    // Remove copy buttons from clone
-    holder.querySelectorAll(".math-copy-button").forEach(function (btn) { btn.remove(); });
-
-    // Replace MathJax containers with LaTeX source
-    var hasMath = false;
-    holder.querySelectorAll("mjx-container").forEach(function (node) {
-      var latex = node.getAttribute("data-latex");
-      if (latex) {
-        node.replaceWith(document.createTextNode(latex));
-        hasMath = true;
-      }
-    });
-
-    // Replace math-copy-wrap with its LaTeX
-    holder.querySelectorAll(".math-copy-wrap").forEach(function (wrapper) {
-      var latex = wrapper.getAttribute("data-latex");
-      if (latex) {
-        wrapper.replaceWith(document.createTextNode(latex));
-        hasMath = true;
-      }
-    });
-
-    // Only intercept if selection actually contained math
-    if (!hasMath) return;
-
-    var text = holder.innerText
-      .replace(/\n{3,}/g, "\n\n")
-      .replace(/[ \t]+\n/g, "\n")
-      .trim();
-
-    if (!text) return;
-
-    event.preventDefault();
-    event.clipboardData.setData("text/plain", text);
-  });
-
   function enhanceMathCopy() {
     var mathItems = window.MathJax && window.MathJax.startup && window.MathJax.startup.document
       ? Array.from(window.MathJax.startup.document.math || [])
@@ -552,8 +504,8 @@
   script.id = "J_mathjax";
   script.async = true;
   script.src = currentScript && currentScript.src
-    ? new URL("../vendor/mathjax/tex-svg.js", currentScript.src).toString()
-    : "/assets/vendor/mathjax/tex-svg.js";
+    ? new URL("../vendor/mathjax/tex-chtml-full.js", currentScript.src).toString()
+    : "/assets/vendor/mathjax/tex-chtml-full.js";
   script.addEventListener("load", scheduleMathCopyEnhancement);
   document.head.appendChild(script);
   window.setTimeout(scheduleMathCopyEnhancement, 600);
