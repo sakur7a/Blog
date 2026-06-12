@@ -484,26 +484,6 @@
     });
   }
 
-  document.addEventListener("copy", function (event) {
-    var selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
-
-    var range = selection.getRangeAt(0);
-    if (typeof range.intersectsNode === "function") {
-      if (!range.intersectsNode(content)) return;
-    } else if (!content.contains(range.commonAncestorContainer)) {
-      return;
-    }
-
-    var fragment = range.cloneContents();
-    var holder = document.createElement("div");
-    holder.appendChild(fragment);
-    var text = normalizeCopyText(holder);
-    if (!text) return;
-
-    event.preventDefault();
-    event.clipboardData.setData("text/plain", text);
-  });
 
   function scheduleMathCopyEnhancement() {
     var attempts = 0;
@@ -551,6 +531,56 @@
   script.addEventListener("load", scheduleMathCopyEnhancement);
   document.head.appendChild(script);
   window.setTimeout(scheduleMathCopyEnhancement, 600);
+})();
+
+/* Code block copy button (tw93 style) */
+(function () {
+  var highlights = document.querySelectorAll(".highlighter-rouge > div.highlight");
+  if (!highlights.length) return;
+
+  highlights.forEach(function (highlight) {
+    if (highlight.querySelector(".highlight-header")) return;
+
+    var code = highlight.querySelector("code");
+    var language = "";
+
+    if (code) {
+      language = code.getAttribute("data-lang") || "";
+      if (!language && code.className) {
+        var match = code.className.match(/language-([a-z0-9_+.-]+)/i);
+        language = match ? match[1] : "";
+      }
+    }
+
+    var header = document.createElement("div");
+    header.className = "highlight-header";
+    header.innerHTML =
+      '<div class="highlight-dots">' +
+      '<span class="dot-red"></span><span class="dot-yellow"></span><span class="dot-green"></span>' +
+      "</div>" +
+      '<span class="highlight-lang">' + language + "</span>" +
+      '<span class="copy-btn">Copy</span>';
+    highlight.insertBefore(header, highlight.firstChild);
+
+    var copyBtn = header.querySelector(".copy-btn");
+    copyBtn.addEventListener("click", function () {
+      var pre = highlight.querySelector("pre");
+      if (!pre) return;
+      navigator.clipboard.writeText(pre.innerText).then(function () {
+        copyBtn.textContent = "✓ Copied";
+        copyBtn.style.color = "#27c93f";
+        setTimeout(function () {
+          copyBtn.textContent = "Copy";
+          copyBtn.style.color = "";
+        }, 2000);
+      })["catch"](function () {
+        copyBtn.textContent = "✗ Failed";
+        setTimeout(function () {
+          copyBtn.textContent = "Copy";
+        }, 2000);
+      });
+    });
+  });
 })();
 
 // Tags page filtering

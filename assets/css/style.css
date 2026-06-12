@@ -747,6 +747,92 @@ body#post-index {
   border: 1px solid var(--code-border);
 }
 
+::selection {
+  background-color: rgba(36, 41, 47, 0.15);
+  color: inherit;
+}
+
+pre::selection,
+pre code::selection,
+pre span::selection {
+  background-color: rgba(93, 70, 168, 0.36);
+  color: inherit;
+}
+
+pre {
+  user-select: text;
+}
+
+button,
+[role="button"] {
+  user-select: none;
+}
+
+/* Code block header (tw93 style) */
+.highlight-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 6px 6px 0 0;
+}
+
+.highlighter-rouge .highlight {
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.highlighter-rouge .highlight pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+
+.highlight-dots {
+  display: flex;
+  gap: 6px;
+  margin-right: 12px;
+}
+
+.dot-red,
+.dot-yellow,
+.dot-green {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot-red { background: #ff5f57; }
+.dot-yellow { background: #febc2e; }
+.dot-green { background: #28c840; }
+
+.highlight-lang {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  user-select: none;
+  pointer-events: none;
+}
+
+.copy-btn {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.copy-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .archive-tabs {
   display: flex;
   flex-wrap: wrap;
