@@ -18,8 +18,6 @@ menu:
     url: "/archive.html"
   - title: "Moments"
     url: "/moments.html"
-  - title: "Tags"
-    url: "/tags/"
   - title: "About"
     url: "/about.html"
   - title: "GitHub"

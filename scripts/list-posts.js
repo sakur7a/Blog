@@ -43,17 +43,6 @@ function categoryFromYaml(yaml) {
   return match ? match[1] : "随笔";
 }
 
-function tagsFromYaml(yaml) {
-  const raw = readYamlValue(yaml, "tags");
-  if (!raw || raw === "[]") return [];
-  const match = raw.match(/^\[(.*)\]$/);
-  if (!match) return [];
-  return match[1]
-    .split(",")
-    .map((t) => t.trim().replace(/^["']|["']$/g, ""))
-    .filter(Boolean);
-}
-
 function postInfo(root, fileName, options = {}) {
   const fullPath = path.join(root, "_posts", fileName);
   const content = fs.readFileSync(fullPath, "utf8").replace(/^\uFEFF/, "");
@@ -68,7 +57,6 @@ function postInfo(root, fileName, options = {}) {
   const dateValue = readYamlValue(yaml, "date") || `${year}-${month}-${day}`;
   const summary = readYamlValue(yaml, "summary") || firstParagraph(body);
   const category = categoryFromYaml(yaml);
-  const tags = tagsFromYaml(yaml);
   const cover = readYamlValue(yaml, "cover");
   const coverPosition = readYamlValue(yaml, "cover_position");
   const postPath = `_posts/${fileName}`;
@@ -87,7 +75,6 @@ function postInfo(root, fileName, options = {}) {
     date: `${year}-${month}-${day}`,
     dateValue,
     category,
-    tags,
     summary,
     slug,
     cover,
@@ -124,6 +111,5 @@ module.exports = {
   listPosts,
   postInfo,
   splitFrontMatter,
-  readYamlValue,
-  tagsFromYaml
+  readYamlValue
 };

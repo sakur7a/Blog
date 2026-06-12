@@ -2,7 +2,6 @@
 title: "CreatiParser：Generative Image Parsing of Raster Graphic Designs into Editable Layers"
 categories: [学习]
 summary: "读论文day1"
-tags: [多图层, diffusion, RL]
 cover_position: "50% 50%"
 date: 2026-05-19 19:41:34 +0800
 slug: creatiparser

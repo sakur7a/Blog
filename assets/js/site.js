@@ -169,8 +169,7 @@
     }
 
     render((index || []).filter(function (item) {
-      var tags = Array.isArray(item.tags) ? item.tags.join(" ") : "";
-      return (item.title + " " + item.summary + " " + tags).toLowerCase().indexOf(query) !== -1;
+      return (item.title + " " + item.summary).toLowerCase().indexOf(query) !== -1;
     }));
   }
 
@@ -561,39 +560,6 @@
   });
 })();
 
-// Tags page filtering
-(function () {
-  var cloud = document.querySelector(".tag-cloud");
-  var groups = document.querySelectorAll(".tag-group");
-  if (!cloud || !groups.length) return;
-
-  var items = cloud.querySelectorAll(".tag-cloud-item");
-
-  function activateTag(tag) {
-    items.forEach(function (item) {
-      item.classList.toggle("active", item.getAttribute("data-tag") === tag);
-    });
-    groups.forEach(function (group) {
-      group.hidden = tag && group.getAttribute("data-tag") !== tag;
-    });
-  }
-
-  cloud.addEventListener("click", function (event) {
-    var item = event.target.closest(".tag-cloud-item");
-    if (!item) return;
-    event.preventDefault();
-    var tag = item.getAttribute("data-tag");
-    var current = cloud.querySelector(".tag-cloud-item.active");
-    var next = current && current.getAttribute("data-tag") === tag ? "" : tag;
-    activateTag(next);
-    history.replaceState(null, "", next ? "#" + tag : window.location.pathname);
-  });
-
-  // Auto-activate from hash
-  if (window.location.hash) {
-    activateTag(decodeURIComponent(window.location.hash.slice(1)));
-  }
-})();
 
 /* PhotoSwipe lightbox for all content images */
 (function () {

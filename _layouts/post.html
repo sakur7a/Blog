@@ -15,14 +15,6 @@ body_id: post
         <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%Y-%m-%d" }}</time>
       </div>
 
-      {% if page.tags.size > 0 %}
-      <div class="post-tags">
-        {% for tag in page.tags %}
-          <a href="{{ '/tags/' | relative_url }}#{{ tag }}" class="tag-chip">{{ tag }}</a>
-        {% endfor %}
-      </div>
-      {% endif %}
-
       {{ content }}
     </div>
   </article>

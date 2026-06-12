@@ -36,17 +36,6 @@ function writeYamlValue(yaml, key, value) {
   return yaml.trim() ? `${yaml.trimEnd()}\n${line}` : line;
 }
 
-function tagsFromYaml(yaml) {
-  const raw = readYamlValue(yaml, "tags");
-  if (!raw || raw === "[]") return [];
-  const match = raw.match(/^\[(.*)\]$/);
-  if (!match) return [];
-  return match[1]
-    .split(",")
-    .map((t) => t.trim().replace(/^["']|["']$/g, ""))
-    .filter(Boolean);
-}
-
 function quoteYaml(value) {
   return `"${String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
@@ -77,8 +66,7 @@ function extractMetadata(content, filePath) {
   const title = readYamlValue(yaml, "title") || (isMoments ? "" : fileTitle(filePath));
   const summary = readYamlValue(yaml, "summary") || (isMoments ? "" : firstSummary(body));
   const coverPosition = readYamlValue(yaml, "cover_position") || "50% 50%";
-  const tags = tagsFromYaml(yaml);
-  return { title, summary, category, tags, coverPosition };
+  return { title, summary, category, coverPosition };
 }
 
 function applyMetadata(content, metadata) {
@@ -91,11 +79,6 @@ function applyMetadata(content, metadata) {
   nextYaml = writeYamlValue(nextYaml, "categories", `[${metadata.category}]`);
   if (metadata.summary || !isMoments) {
     nextYaml = writeYamlValue(nextYaml, "summary", quoteYaml(metadata.summary || ""));
-  }
-  if (metadata.tags && metadata.tags.length) {
-    nextYaml = writeYamlValue(nextYaml, "tags", `[${metadata.tags.join(", ")}]`);
-  } else {
-    nextYaml = writeYamlValue(nextYaml, "tags", "[]");
   }
   if (metadata.coverPosition) {
     nextYaml = writeYamlValue(nextYaml, "cover_position", quoteYaml(metadata.coverPosition));
@@ -757,7 +740,6 @@ class PublishPostModal extends Modal {
       title: draft.metadata.title || "",
       summary: draft.metadata.summary || "",
       category: CATEGORIES.includes(draft.metadata.category) ? draft.metadata.category : "随笔",
-      tags: draft.metadata.tags || [],
       coverPath: "",
       coverPosition: draft.metadata.coverPosition || "50% 50%"
     };
@@ -813,22 +795,6 @@ class PublishPostModal extends Modal {
             this.renderPreview();
           });
         text.inputEl.addClass("sakura-publisher-summary-input");
-      });
-
-    new Setting(contentEl)
-      .setName("标签")
-      .setDesc("用逗号或空格分隔，如：机器学习, 深度学习, 笔记")
-      .addText((text) => {
-        text
-          .setPlaceholder("标签1, 标签2, 标签3")
-          .setValue(this.metadata.tags.join(", "))
-          .onChange((value) => {
-            this.metadata.tags = value
-              .split(/[,，\s]+/)
-              .map((t) => t.trim())
-              .filter(Boolean);
-            this.renderPreview();
-          });
       });
 
     const coverSetting = new Setting(contentEl)
@@ -950,11 +916,6 @@ class PublishPostModal extends Modal {
 
     const meta = this.previewEl.createDiv({ cls: "sakura-publisher-preview-meta" });
     meta.createSpan({ text: this.metadata.category || "随笔" });
-    if (this.metadata.tags.length) {
-      this.metadata.tags.forEach(function (tag) {
-        meta.createSpan({ text: "#" + tag });
-      });
-    }
     meta.createSpan({ text: this.draft.displayPath });
     if (this.metadata.coverName) {
       meta.createSpan({ text: `封面：${this.metadata.coverName}` });
@@ -1193,7 +1154,6 @@ class ManageContentModal extends Modal {
       title: this.draft.metadata.title || "",
       summary: this.draft.metadata.summary || "",
       category: CATEGORIES.includes(this.draft.metadata.category) ? this.draft.metadata.category : "随笔",
-      tags: this.draft.metadata.tags || [],
       coverPath: "",
       coverPosition: this.draft.metadata.coverPosition || "50% 50%"
     };
@@ -1230,21 +1190,6 @@ class ManageContentModal extends Modal {
           .setValue(this.publishMeta.summary)
           .onChange((value) => { this.publishMeta.summary = value.trim(); });
         text.inputEl.addClass("sakura-publisher-summary-input");
-      });
-
-    new Setting(this.publishContainer)
-      .setName("标签")
-      .setDesc("用逗号或空格分隔")
-      .addText((text) => {
-        text
-          .setPlaceholder("标签1, 标签2")
-          .setValue(this.publishMeta.tags.join(", "))
-          .onChange((value) => {
-            this.publishMeta.tags = value
-              .split(/[,，\s]+/)
-              .map((t) => t.trim())
-              .filter(Boolean);
-          });
       });
 
     const coverSetting = new Setting(this.publishContainer)
@@ -1312,15 +1257,6 @@ class ManageContentModal extends Modal {
       cls: `sakura-manager-badge sakura-manager-badge--${previewBadgeClass}`,
       text: this.publishMeta.category
     });
-    if (this.publishMeta.tags && this.publishMeta.tags.length) {
-      this.publishMeta.tags.forEach(function (tag) {
-        meta.createSpan({
-          cls: "sakura-manager-badge",
-          text: tag,
-          attr: { style: "background: rgba(139,92,246,0.12); color: rgb(139,92,246);" }
-        });
-      });
-    }
     meta.createSpan({ text: this.publishMeta.summary || "暂无简介" });
 
     const bodyEl = this.previewSection.createDiv({ cls: "sakura-publish-preview-body" });
@@ -1473,7 +1409,7 @@ class ManageContentModal extends Modal {
 
   renderPosts() {
     this.listEl.empty();
-    const filtered = this.filterList(this.posts, ["title", "summary", "slug", "tags"]);
+    const filtered = this.filterList(this.posts, ["title", "summary", "slug"]);
     const sorted = this.sortPosts(filtered);
 
     if (!this.posts.length) {
@@ -1500,17 +1436,6 @@ class ManageContentModal extends Modal {
       meta.createSpan({ text: post.date || "无日期" });
       if (post.summary) {
         meta.createSpan({ text: post.summary });
-      }
-
-      if (post.tags && post.tags.length) {
-        const tagsEl = card.createDiv({ cls: "sakura-manager-card-meta" });
-        post.tags.forEach(function (tag) {
-          tagsEl.createSpan({
-            cls: "sakura-manager-badge",
-            text: tag,
-            attr: { style: "background: rgba(139,92,246,0.12); color: rgb(139,92,246);" }
-          });
-        });
       }
 
       const actions = card.createDiv({ cls: "sakura-manager-card-actions" });
@@ -1563,11 +1488,6 @@ class ManageContentModal extends Modal {
           }
         });
         input.click();
-      });
-
-      const tagsButton = actions.createEl("button", { text: "编辑标签" });
-      tagsButton.addEventListener("click", () => {
-        new EditTagsModal(this.app, this.plugin, post, this).open();
       });
 
       const deleteButton = actions.createEl("button", { text: "删除" });
@@ -1762,63 +1682,6 @@ class DeletePostModal extends Modal {
       this.close();
       await this.plugin.deleteManagedPost(this.post, { deleteAssets: this.deleteAssets });
       if (this.manager) await this.manager.loadPosts();
-    });
-  }
-}
-
-class EditTagsModal extends Modal {
-  constructor(app, plugin, post, manager) {
-    super(app);
-    this.plugin = plugin;
-    this.post = post;
-    this.manager = manager;
-    this.tagsInput = (post.tags || []).join(", ");
-  }
-
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.addClass("sakura-publisher-modal");
-    contentEl.empty();
-    contentEl.createEl("h2", { text: "编辑标签" });
-    contentEl.createEl("p", { text: this.post.title || this.post.postPath });
-
-    new Setting(contentEl)
-      .setName("标签")
-      .setDesc("用逗号或空格分隔多个标签")
-      .addText((text) => {
-        text
-          .setPlaceholder("标签1, 标签2")
-          .setValue(this.tagsInput)
-          .onChange((value) => {
-            this.tagsInput = value;
-          });
-      });
-
-    const actions = contentEl.createDiv({ cls: "sakura-publisher-actions" });
-    actions.createEl("button", { text: "取消" }).addEventListener("click", () => this.close());
-
-    const confirmBtn = actions.createEl("button", { text: "保存并推送", cls: "mod-cta" });
-    confirmBtn.addEventListener("click", async () => {
-      const tags = this.tagsInput
-        .split(/[,，\s]+/)
-        .map((t) => t.trim())
-        .filter(Boolean);
-      this.close();
-      try {
-        await this.plugin.runNode([
-          "scripts/manage-post.js",
-          "edit-tags",
-          "--post",
-          this.post.postPath,
-          "--tags",
-          tags.join(", ")
-        ]);
-        new Notice("标签已更新并推送。");
-        if (this.manager) await this.manager.loadPosts();
-      } catch (error) {
-        console.error(error);
-        new Notice(`更新标签失败：${error.message}`);
-      }
     });
   }
 }
