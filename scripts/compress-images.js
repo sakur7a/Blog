@@ -5,19 +5,16 @@ const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
 
-const SIZE_THRESHOLD = 200 * 1024; // 200KB
 const WEBP_QUALITY = 80;
 const MAX_WIDTH = 2000;
 
 const SUPPORTED_EXTENSIONS = new Set([".png", ".jpg", ".jpeg"]);
 
-async function compressImage(filePath) {
+async function convertToWebp(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   if (!SUPPORTED_EXTENSIONS.has(ext)) return null;
 
   const stat = fs.statSync(filePath);
-  if (stat.size <= SIZE_THRESHOLD) return null;
-
   const webpPath = filePath.replace(/\.(png|jpe?g)$/i, ".webp");
   const buffer = fs.readFileSync(filePath);
 
@@ -28,9 +25,9 @@ async function compressImage(filePath) {
 
   const originalSize = stat.size;
   const compressedSize = fs.statSync(webpPath).size;
-  const ratio = ((1 - compressedSize / originalSize) * 100).toFixed(1);
+  const ratio = originalSize > 0 ? ((1 - compressedSize / originalSize) * 100).toFixed(1) : "0";
 
-  // Delete original after successful compression
+  // Delete original after successful conversion
   fs.unlinkSync(filePath);
 
   return {
@@ -64,7 +61,7 @@ async function main() {
     if (!fs.statSync(filePath).isFile()) continue;
 
     try {
-      const result = await compressImage(filePath);
+      const result = await convertToWebp(filePath);
       if (result) results.push(result);
     } catch (error) {
       console.error(`Failed to compress ${file}: ${error.message}`);
