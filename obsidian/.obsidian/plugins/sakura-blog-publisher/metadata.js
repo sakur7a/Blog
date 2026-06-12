@@ -45,11 +45,12 @@ function fileTitle(path) {
 
 function extractMetadata(content, filePath) {
   const { yaml, body } = splitFrontMatter(content);
-  const title = readYamlValue(yaml, "title") || fileTitle(filePath);
-  const summary = readYamlValue(yaml, "summary") || firstSummary(body);
   const categories = readYamlValue(yaml, "categories") || "[随笔]";
   const categoryMatch = categories.match(/[\[\s,]([^,\]\s]+)[,\]\s]?/);
   const category = categoryMatch ? categoryMatch[1] : "随笔";
+  const isMoments = category === "moments";
+  const title = readYamlValue(yaml, "title") || (isMoments ? "" : fileTitle(filePath));
+  const summary = readYamlValue(yaml, "summary") || (isMoments ? "" : firstSummary(body));
 
   return { title, summary, category };
 }
@@ -57,9 +58,14 @@ function extractMetadata(content, filePath) {
 function applyMetadata(content, metadata) {
   const { yaml, body } = splitFrontMatter(content);
   let nextYaml = yaml;
-  nextYaml = writeYamlValue(nextYaml, "title", quoteYaml(metadata.title));
+  const isMoments = metadata.category === "moments";
+  if (metadata.title || !isMoments) {
+    nextYaml = writeYamlValue(nextYaml, "title", quoteYaml(metadata.title || ""));
+  }
   nextYaml = writeYamlValue(nextYaml, "categories", `[${metadata.category}]`);
-  nextYaml = writeYamlValue(nextYaml, "summary", quoteYaml(metadata.summary));
+  if (metadata.summary || !isMoments) {
+    nextYaml = writeYamlValue(nextYaml, "summary", quoteYaml(metadata.summary || ""));
+  }
   return `---\n${nextYaml.trim()}\n---\n\n${body.trimStart()}`;
 }
 

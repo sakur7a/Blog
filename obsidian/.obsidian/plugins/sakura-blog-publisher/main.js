@@ -14,7 +14,7 @@ const DEFAULT_SETTINGS = {
   skipTestsForPreview: true
 };
 
-const CATEGORIES = ["随笔", "学习"];
+const CATEGORIES = ["随笔", "学习", "moments"];
 
 function splitFrontMatter(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
@@ -70,11 +70,12 @@ function fileTitle(filePath) {
 
 function extractMetadata(content, filePath) {
   const { yaml, body } = splitFrontMatter(content);
-  const title = readYamlValue(yaml, "title") || fileTitle(filePath);
-  const summary = readYamlValue(yaml, "summary") || firstSummary(body);
   const categories = readYamlValue(yaml, "categories") || "[随笔]";
   const categoryMatch = categories.match(/[\[\s,]([^,\]\s]+)[,\]\s]?/);
   const category = categoryMatch ? categoryMatch[1] : "随笔";
+  const isMoments = category === "moments";
+  const title = readYamlValue(yaml, "title") || (isMoments ? "" : fileTitle(filePath));
+  const summary = readYamlValue(yaml, "summary") || (isMoments ? "" : firstSummary(body));
   const coverPosition = readYamlValue(yaml, "cover_position") || "50% 50%";
   const tags = tagsFromYaml(yaml);
   return { title, summary, category, tags, coverPosition };
@@ -83,9 +84,14 @@ function extractMetadata(content, filePath) {
 function applyMetadata(content, metadata) {
   const { yaml, body } = splitFrontMatter(content);
   let nextYaml = yaml;
-  nextYaml = writeYamlValue(nextYaml, "title", quoteYaml(metadata.title));
+  const isMoments = metadata.category === "moments";
+  if (metadata.title || !isMoments) {
+    nextYaml = writeYamlValue(nextYaml, "title", quoteYaml(metadata.title || ""));
+  }
   nextYaml = writeYamlValue(nextYaml, "categories", `[${metadata.category}]`);
-  nextYaml = writeYamlValue(nextYaml, "summary", quoteYaml(metadata.summary));
+  if (metadata.summary || !isMoments) {
+    nextYaml = writeYamlValue(nextYaml, "summary", quoteYaml(metadata.summary || ""));
+  }
   if (metadata.tags && metadata.tags.length) {
     nextYaml = writeYamlValue(nextYaml, "tags", `[${metadata.tags.join(", ")}]`);
   } else {
@@ -632,6 +638,10 @@ module.exports = class SakuraBlogPublisher extends Plugin {
         background: rgba(34, 197, 94, 0.12);
         color: rgb(34, 197, 94);
       }
+      .sakura-manager-badge--moments {
+        background: rgba(244, 114, 182, 0.12);
+        color: rgb(244, 114, 182);
+      }
       .sakura-manager-card-meta {
         display: flex;
         flex-wrap: wrap;
@@ -780,7 +790,7 @@ class PublishPostModal extends Modal {
 
     new Setting(contentEl)
       .setName("板块")
-      .setDesc("目前博客 Archive 分为随笔和学习。")
+      .setDesc("随笔和学习会出现在 Archive，moments 出现在 Moments 时间线。")
       .addDropdown((dropdown) => {
         CATEGORIES.forEach((category) => dropdown.addOption(category, category));
         dropdown
@@ -793,7 +803,7 @@ class PublishPostModal extends Modal {
 
     new Setting(contentEl)
       .setName("简介")
-      .setDesc("一句话摘要，会显示在列表、搜索和文章元信息里。")
+      .setDesc("一句话摘要，会显示在列表、搜索和文章元信息里。moments 可留空。")
       .addTextArea((text) => {
         text
           .setPlaceholder("用一两句话概括这篇文章。")
@@ -976,12 +986,14 @@ class PublishPostModal extends Modal {
   }
 
   async submit({ preview }) {
-    if (!this.metadata.title) {
+    const isMoments = this.metadata.category === "moments";
+
+    if (!isMoments && !this.metadata.title) {
       new Notice("请先填写标题。");
       return;
     }
 
-    if (!this.metadata.summary) {
+    if (!isMoments && !this.metadata.summary) {
       new Notice("请先填写简介。");
       return;
     }
@@ -1211,6 +1223,7 @@ class ManageContentModal extends Modal {
 
     new Setting(this.publishContainer)
       .setName("简介")
+      .setDesc("moments 可留空")
       .addTextArea((text) => {
         text
           .setPlaceholder("用一两句话概括这篇文章。")
@@ -1294,8 +1307,9 @@ class ManageContentModal extends Modal {
     }
     card.createEl("h2", { text: this.publishMeta.title || "未填写标题" });
     const meta = card.createDiv({ cls: "sakura-publish-preview-meta" });
+    const previewBadgeClass = this.publishMeta.category === "学习" ? "study" : this.publishMeta.category === "moments" ? "moments" : "essay";
     meta.createSpan({
-      cls: `sakura-manager-badge sakura-manager-badge--${this.publishMeta.category === "学习" ? "study" : "essay"}`,
+      cls: `sakura-manager-badge sakura-manager-badge--${previewBadgeClass}`,
       text: this.publishMeta.category
     });
     if (this.publishMeta.tags && this.publishMeta.tags.length) {
@@ -1318,11 +1332,12 @@ class ManageContentModal extends Modal {
 
   async submitPublish({ preview }) {
     if (!this.draft) return;
-    if (!this.publishMeta.title) {
+    const isMoments = this.publishMeta.category === "moments";
+    if (!isMoments && !this.publishMeta.title) {
       new Notice("请先填写标题。");
       return;
     }
-    if (!this.publishMeta.summary) {
+    if (!isMoments && !this.publishMeta.summary) {
       new Notice("请先填写简介。");
       return;
     }
@@ -1452,7 +1467,8 @@ class ManageContentModal extends Modal {
   updatePostStats() {
     const essayCount = this.posts.filter((p) => (p.category || "随笔") === "随笔").length;
     const studyCount = this.posts.filter((p) => p.category === "学习").length;
-    this.statsEl.setText(`共 ${this.posts.length} 篇 · 随笔 ${essayCount} · 学习 ${studyCount}`);
+    const momentsCount = this.posts.filter((p) => p.category === "moments").length;
+    this.statsEl.setText(`共 ${this.posts.length} 篇 · 随笔 ${essayCount} · 学习 ${studyCount} · moments ${momentsCount}`);
   }
 
   renderPosts() {
@@ -1474,8 +1490,9 @@ class ManageContentModal extends Modal {
 
       const header = card.createDiv({ cls: "sakura-manager-card-header" });
       header.createEl("h3", { cls: "sakura-manager-card-title", text: post.title || post.postPath });
+      const badgeClass = post.category === "学习" ? "study" : post.category === "moments" ? "moments" : "essay";
       header.createSpan({
-        cls: `sakura-manager-badge sakura-manager-badge--${post.category === "学习" ? "study" : "essay"}`,
+        cls: `sakura-manager-badge sakura-manager-badge--${badgeClass}`,
         text: post.category || "随笔"
       });
 
