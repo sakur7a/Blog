@@ -418,28 +418,54 @@
     button.setAttribute("data-copied", copied ? "true" : "false");
   }
 
-  function normalizeCopyText(root) {
-    var clone = root.cloneNode(true);
 
-    Array.from(clone.querySelectorAll(".math-copy-button")).forEach(function (button) {
-      button.remove();
+  /* Selective copy: only replace MathJax with LaTeX, leave everything else natural */
+  content.addEventListener("copy", function (event) {
+    var selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+
+    var range = selection.getRangeAt(0);
+    if (!range.intersectsNode(content)) return;
+
+    var fragment = range.cloneContents();
+    var holder = document.createElement("div");
+    holder.appendChild(fragment);
+
+    // Remove copy buttons from clone
+    holder.querySelectorAll(".math-copy-button").forEach(function (btn) { btn.remove(); });
+
+    // Replace MathJax containers with LaTeX source
+    var hasMath = false;
+    holder.querySelectorAll("mjx-container").forEach(function (node) {
+      var latex = node.getAttribute("data-latex");
+      if (latex) {
+        node.replaceWith(document.createTextNode(latex));
+        hasMath = true;
+      }
     });
 
-    Array.from(clone.querySelectorAll(".math-copy-wrap")).forEach(function (wrapper) {
-      var latex = wrapper.getAttribute("data-latex") || "";
-      wrapper.replaceWith(document.createTextNode("\n\n" + latex + "\n\n"));
+    // Replace math-copy-wrap with its LaTeX
+    holder.querySelectorAll(".math-copy-wrap").forEach(function (wrapper) {
+      var latex = wrapper.getAttribute("data-latex");
+      if (latex) {
+        wrapper.replaceWith(document.createTextNode(latex));
+        hasMath = true;
+      }
     });
 
-    Array.from(clone.querySelectorAll("mjx-container")).forEach(function (node) {
-      var latex = node.getAttribute("data-latex") || "";
-      if (latex) node.replaceWith(document.createTextNode(latex));
-    });
+    // Only intercept if selection actually contained math
+    if (!hasMath) return;
 
-    return clone.innerText
+    var text = holder.innerText
       .replace(/\n{3,}/g, "\n\n")
       .replace(/[ \t]+\n/g, "\n")
       .trim();
-  }
+
+    if (!text) return;
+
+    event.preventDefault();
+    event.clipboardData.setData("text/plain", text);
+  });
 
   function enhanceMathCopy() {
     var mathItems = window.MathJax && window.MathJax.startup && window.MathJax.startup.document
