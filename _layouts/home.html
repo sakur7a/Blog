@@ -5,7 +5,9 @@ body_id: post-index
 
 <section class="post-list" aria-label="最新文章">
   {% for post in site.posts %}
-    {% include post-item.html post=post %}
+    {% unless post.categories contains 'moments' %}
+      {% include post-item.html post=post %}
+    {% endunless %}
   {% endfor %}
 </section>
 

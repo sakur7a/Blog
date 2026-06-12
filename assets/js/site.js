@@ -586,3 +586,46 @@
     activateTag(decodeURIComponent(window.location.hash.slice(1)));
   }
 })();
+
+/* Moments lightbox */
+(function () {
+  var cards = document.querySelectorAll(".moment-card");
+  if (!cards.length) return;
+
+  var overlay = document.createElement("div");
+  overlay.className = "moment-lightbox";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-label", "图片预览");
+  var lightboxImg = document.createElement("img");
+  overlay.appendChild(lightboxImg);
+  document.body.appendChild(overlay);
+
+  function open(src) {
+    lightboxImg.src = src;
+    overlay.classList.add("is-open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function close() {
+    overlay.classList.remove("is-open");
+    document.body.style.overflow = "";
+    lightboxImg.src = "";
+  }
+
+  cards.forEach(function (card) {
+    var images = card.querySelectorAll(".moment-body img");
+    images.forEach(function (img) {
+      img.addEventListener("click", function () {
+        open(img.src);
+      });
+    });
+  });
+
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay || e.target === lightboxImg) close();
+  });
+
+  window.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && overlay.classList.contains("is-open")) close();
+  });
+})();
