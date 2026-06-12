@@ -268,6 +268,41 @@ $body = [regex]::Replace($body, '!\[([^\]]*)\]\(([^)]+)\)', {
   return "![$alt]({{ '/$assetDirRelative/$name' | relative_url }})"
 })
 
+# --- Image compression ---
+$compressResult = & node scripts/compress-images.js --dir $assetDir 2>&1
+$compressResult | ForEach-Object { Write-Host $_ }
+$webpMapping = @()
+$mappingLine = ($compressResult | Where-Object { $_ -match '^__MAPPING__' } | Select-Object -Last 1)
+if ($mappingLine) {
+  $mappingJson = $mappingLine -replace '^__MAPPING__', ''
+  $webpMapping = $mappingJson | ConvertFrom-Json
+}
+
+# Convert compressed images to <picture> tags with WebP + fallback
+if ($webpMapping -and $webpMapping.PSObject.Properties.Count -gt 0) {
+  foreach ($prop in $webpMapping.PSObject.Properties) {
+    $origName = [regex]::Escape($prop.Name)
+    $webpName = $prop.Value
+    $escapedRel = [regex]::Escape("$assetDirRelative/$origName")
+    $webpRel = "$assetDirRelative/$webpName"
+    $pattern = "!\[([^\]]*)\]\(\{\{\s*'/$escapedRel'\s*\|\s*relative_url\s*\}\}\)"
+    $body = [regex]::Replace($body, $pattern, {
+      param($m)
+      $alt = $m.Groups[1].Value
+      "<picture><source srcset=`"{{ '/$webpRel' | relative_url }}`" type=`"image/webp`"><img src=`"{{ '/$assetDirRelative/$origName' | relative_url }}`" alt=`"$alt`" loading=`"lazy`" decoding=`"async`"></picture>"
+    })
+  }
+  # Update cover path if compressed to WebP
+  if ($yaml -match 'cover:\s*"(/assets/images/posts/[^"]+)"') {
+    $coverRel = $matches[1]
+    $coverFile = Split-Path $coverRel -Leaf
+    if ($webpMapping.$coverFile) {
+      $webpCoverRel = $coverRel -replace [regex]::Escape($coverFile), $webpMapping.$coverFile
+      $yaml = $yaml -replace [regex]::Escape($coverRel), $webpCoverRel
+    }
+  }
+}
+
 $body = Normalize-DisplayMath -Markdown $body
 
 $postRelative = "_posts/$datePrefix-$slug.md"
