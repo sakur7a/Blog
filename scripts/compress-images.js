@@ -30,6 +30,9 @@ async function compressImage(filePath) {
   const compressedSize = fs.statSync(webpPath).size;
   const ratio = ((1 - compressedSize / originalSize) * 100).toFixed(1);
 
+  // Delete original after successful compression
+  fs.unlinkSync(filePath);
+
   return {
     original: path.basename(filePath),
     compressed: path.basename(webpPath),

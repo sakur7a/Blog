@@ -33,13 +33,13 @@ $$
 | $L_{\text{sticker}}$    | RGBA 图像 | 非文字前景元素，例如线条、图标、几何形状、装饰元素 |
 | $L_{\text{background}}$ | RGB 图像  | 全局背景、纹理、底色、摄影图像等          |
 
-<picture><source srcset="{{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518225912.webp' | relative_url }}" type="image/webp"><img src="{{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518225912.png' | relative_url }}" alt="" loading="lazy" decoding="async"></picture>
-<picture><source srcset="{{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518234110.webp' | relative_url }}" type="image/webp"><img src="{{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518234110.png' | relative_url }}" alt="" loading="lazy" decoding="async"></picture>
+![]({{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518225912.webp' | relative_url }})
+![]({{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518234110.webp' | relative_url }})
 
 ---
 ## 2.2 pipeline
 
-<picture><source srcset="{{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518225954.webp' | relative_url }}" type="image/webp"><img src="{{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518225954.png' | relative_url }}" alt="" loading="lazy" decoding="async"></picture>
+![]({{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518225954.webp' | relative_url }})
 
 1. VLM-based Text Layer Parsing：用 Qwen3-VL + LoRA 从图像预测文本渲染协议 JSON，再用渲染引擎生成文字层。
 2. Multi-branch Diffusion for Background and Sticker：用三分支 SDXL U-Net 生成背景和贴纸，支持 RGBA 透明图层。
@@ -201,6 +201,6 @@ $$
 - LayerD：matting-first，再做 background completion。
 - 由于不同方法和 Crello 的图层 taxonomy 不一致，作者用 GPT-4V 做自动层类别归一化，并用 200 个样本人工验证，报告总体分类准确率 94.5%。
 
-<picture><source srcset="{{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518234141.webp' | relative_url }}" type="image/webp"><img src="{{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518234141.png' | relative_url }}" alt="" loading="lazy" decoding="async"></picture>
+![]({{ '/assets/images/posts/2026-05-19-creatiparser/Pasted image 20260518234141.webp' | relative_url }})
 
 

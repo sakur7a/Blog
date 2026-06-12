@@ -278,7 +278,7 @@ if ($mappingLine) {
   $webpMapping = $mappingJson | ConvertFrom-Json
 }
 
-# Convert compressed images to <picture> tags with WebP + fallback
+# Replace compressed image references with WebP paths (originals deleted)
 if ($webpMapping -and $webpMapping.PSObject.Properties.Count -gt 0) {
   foreach ($prop in $webpMapping.PSObject.Properties) {
     $origName = [regex]::Escape($prop.Name)
@@ -289,7 +289,7 @@ if ($webpMapping -and $webpMapping.PSObject.Properties.Count -gt 0) {
     $body = [regex]::Replace($body, $pattern, {
       param($m)
       $alt = $m.Groups[1].Value
-      "<picture><source srcset=`"{{ '/$webpRel' | relative_url }}`" type=`"image/webp`"><img src=`"{{ '/$assetDirRelative/$origName' | relative_url }}`" alt=`"$alt`" loading=`"lazy`" decoding=`"async`"></picture>"
+      "![$alt]({{ '/$webpRel' | relative_url }})"
     })
   }
   # Update cover path if compressed to WebP
