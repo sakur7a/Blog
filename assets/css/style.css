@@ -1136,32 +1136,33 @@ body#post-index {
   padding: 40px 0;
 }
 
-/* Lightbox */
-.moment-lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.82);
-  backdrop-filter: blur(6px);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+/* PhotoSwipe customization */
+.entry-content img,
+.moment-body img {
+  cursor: zoom-in;
 }
 
-.moment-lightbox.is-open {
-  opacity: 1;
-  visibility: visible;
+.pswp--minimal .pswp__top-bar,
+.pswp--minimal .pswp__button--close,
+.pswp--minimal .pswp__button--zoom,
+.pswp--minimal .pswp__button--arrow--prev,
+.pswp--minimal .pswp__button--arrow--next,
+.pswp--minimal .pswp__counter,
+.pswp--minimal .pswp__preloader {
+  display: none !important;
 }
 
-.moment-lightbox img {
-  max-width: 92vw;
-  max-height: 92vh;
-  border-radius: 8px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
-  cursor: zoom-out;
+.pswp-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 24px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
 }
 
 @media (min-width: 768px) {

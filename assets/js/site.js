@@ -587,45 +587,76 @@
   }
 })();
 
-/* Moments lightbox */
+/* PhotoSwipe lightbox for all content images */
 (function () {
-  var cards = document.querySelectorAll(".moment-card");
-  if (!cards.length) return;
+  var zoomImgs = document.querySelectorAll(".entry-content img, .moment-body img");
+  if (!zoomImgs.length) return;
 
-  var overlay = document.createElement("div");
-  overlay.className = "moment-lightbox";
-  overlay.setAttribute("role", "dialog");
-  overlay.setAttribute("aria-label", "图片预览");
-  var lightboxImg = document.createElement("img");
-  overlay.appendChild(lightboxImg);
-  document.body.appendChild(overlay);
+  var vendorBase = (function () {
+    var scripts = document.getElementsByTagName("script");
+    for (var i = 0; i < scripts.length; i++) {
+      var src = scripts[i].getAttribute("src") || "";
+      var idx = src.indexOf("assets/js/site.js");
+      if (idx !== -1) return src.slice(0, idx) + "assets/vendor/photoswipe/";
+    }
+    return "/assets/vendor/photoswipe/";
+  })();
 
-  function open(src) {
-    lightboxImg.src = src;
-    overlay.classList.add("is-open");
-    document.body.style.overflow = "hidden";
+  function loadCSS(href) {
+    var link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    document.head.appendChild(link);
   }
 
-  function close() {
-    overlay.classList.remove("is-open");
-    document.body.style.overflow = "";
-    lightboxImg.src = "";
+  function loadScript(src, callback) {
+    var script = document.createElement("script");
+    script.src = src;
+    script.onload = callback;
+    document.body.appendChild(script);
   }
 
-  cards.forEach(function (card) {
-    var images = card.querySelectorAll(".moment-body img");
-    images.forEach(function (img) {
-      img.addEventListener("click", function () {
-        open(img.src);
+  loadCSS(vendorBase + "photoswipe.css");
+
+  loadScript(vendorBase + "photoswipe.umd.min.js", function () {
+    loadScript(vendorBase + "photoswipe-lightbox.umd.min.js", function () {
+      var lightbox = new PhotoSwipeLightbox({
+        gallery: ".entry-content, .moment-body",
+        children: "img",
+        pswpModule: PhotoSwipe,
+        bgOpacity: 0.92,
+        padding: { top: 20, bottom: 20, left: 20, right: 20 },
+        mainClass: "pswp--minimal"
       });
+
+      lightbox.addFilter("domItemData", function (itemData, element) {
+        if (!element) return itemData;
+        if (element.classList.contains("emoji") || element.classList.contains("no-zoom")) return null;
+        itemData.src = element.getAttribute("data-pswp-src") || element.currentSrc || element.src;
+        itemData.w = element.naturalWidth || window.innerWidth;
+        itemData.h = element.naturalHeight || window.innerHeight;
+        itemData.msrc = element.src;
+        return itemData;
+      });
+
+      lightbox.on("uiRegister", function () {
+        lightbox.pswp.ui.registerElement({
+          name: "custom-caption",
+          order: 9,
+          isButton: false,
+          appendTo: "root",
+          html: "",
+          onInit: function (el, pswp) {
+            pswp.on("change", function () {
+              var curr = pswp.currSlide.data.element;
+              var alt = curr ? (curr.getAttribute("alt") || "") : "";
+              el.innerHTML = alt ? '<div class="pswp-caption">' + alt + "</div>" : "";
+            });
+          }
+        });
+      });
+
+      lightbox.init();
     });
-  });
-
-  overlay.addEventListener("click", function (e) {
-    if (e.target === overlay || e.target === lightboxImg) close();
-  });
-
-  window.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && overlay.classList.contains("is-open")) close();
   });
 })();
