@@ -15,8 +15,7 @@ test("parses publish draft arguments", () => {
     "--slug",
     "ml",
     "--no-commit",
-    "--no-push",
-    "--skip-tests"
+    "--no-push"
   ]);
 
   assert.equal(options.draft, "obsidian/Drafts/demo.md");
@@ -26,7 +25,6 @@ test("parses publish draft arguments", () => {
   assert.equal(options.slug, "ml");
   assert.equal(options.noCommit, true);
   assert.equal(options.noPush, true);
-  assert.equal(options.skipTests, true);
 });
 
 test("defaults to full publish mode", () => {
@@ -39,5 +37,4 @@ test("defaults to full publish mode", () => {
   assert.equal(options.slug, "");
   assert.equal(options.noCommit, false);
   assert.equal(options.noPush, false);
-  assert.equal(options.skipTests, false);
 });

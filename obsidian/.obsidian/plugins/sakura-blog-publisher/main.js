@@ -10,8 +10,7 @@ try {
 }
 
 const DEFAULT_SETTINGS = {
-  blogRoot: "D:\\MyBlog",
-  skipTestsForPreview: true
+  blogRoot: "D:\\MyBlog"
 };
 
 const CATEGORIES = ["随笔", "学习", "moments"];
@@ -220,7 +219,6 @@ module.exports = class SakuraBlogPublisher extends Plugin {
     if (preview) {
       args.push("--no-commit");
       args.push("--no-push");
-      if (this.settings.skipTestsForPreview) args.push("--skip-tests");
     }
 
     new Notice(preview ? "开始生成预览..." : "开始发布并推送...");
@@ -315,8 +313,7 @@ module.exports = class SakuraBlogPublisher extends Plugin {
         "--post",
         post.postPath,
         "--cover",
-        coverPath,
-        "--skip-tests"
+        coverPath
       ];
       if (coverPosition) {
         args.push("--cover-position", coverPosition);
@@ -337,7 +334,6 @@ module.exports = class SakuraBlogPublisher extends Plugin {
         "delete",
         "--post",
         post.postPath,
-        "--skip-tests",
         ...(deleteAssets ? ["--assets"] : [])
       ]);
       new Notice("文章已删除并推送。");
@@ -1710,16 +1706,5 @@ class SakuraPublisherSettingTab extends PluginSettingTab {
           })
       );
 
-    new Setting(containerEl)
-      .setName("预览发布跳过测试")
-      .setDesc("预览命令只生成文章并构建，速度更快；正式发布仍会跑完整脚本。")
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.skipTestsForPreview)
-          .onChange(async (value) => {
-            this.plugin.settings.skipTestsForPreview = value;
-            await this.plugin.saveSettings();
-          })
-      );
   }
 }

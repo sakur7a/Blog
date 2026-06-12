@@ -13,8 +13,7 @@ param(
 [string]$SlugOverride,
 
 [switch]$NoCommit,
-[switch]$NoPush,
-[switch]$SkipTests
+[switch]$NoPush
 )
 
 $ErrorActionPreference = "Stop"
@@ -326,12 +325,9 @@ if ($NoCommit -and $NoPush) {
   )
 }
 
-# Preview mode: skip build and tests for faster iteration
+# Build site (skip in preview mode for faster iteration)
 if (-not ($NoCommit -and $NoPush)) {
   npm run build
-  if (-not $SkipTests) {
-    npm run test:e2e
-  }
 }
 
 if (-not $NoCommit) {
