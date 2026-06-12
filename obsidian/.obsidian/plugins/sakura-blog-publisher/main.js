@@ -72,14 +72,14 @@ function applyMetadata(content, metadata) {
   const { yaml, body } = splitFrontMatter(content);
   let nextYaml = yaml;
   const isMoments = metadata.category === "moments";
-  if (metadata.title || !isMoments) {
-    nextYaml = writeYamlValue(nextYaml, "title", quoteYaml(metadata.title || ""));
+  if (!isMoments && metadata.title) {
+    nextYaml = writeYamlValue(nextYaml, "title", quoteYaml(metadata.title));
   }
   nextYaml = writeYamlValue(nextYaml, "categories", `[${metadata.category}]`);
-  if (metadata.summary || !isMoments) {
-    nextYaml = writeYamlValue(nextYaml, "summary", quoteYaml(metadata.summary || ""));
+  if (!isMoments && metadata.summary) {
+    nextYaml = writeYamlValue(nextYaml, "summary", quoteYaml(metadata.summary));
   }
-  if (metadata.coverPosition) {
+  if (!isMoments && metadata.coverPosition) {
     nextYaml = writeYamlValue(nextYaml, "cover_position", quoteYaml(metadata.coverPosition));
   }
   return `---\n${nextYaml.trim()}\n---\n\n${body.trimStart()}`;
@@ -752,7 +752,7 @@ class PublishPostModal extends Modal {
       text: "发布前确认标题、简介和归档板块。预览不会提交或推送，正式发布会走完整构建并推送到 GitHub。"
     });
 
-    new Setting(contentEl)
+    const titleSetting = new Setting(contentEl)
       .setName("标题")
       .setDesc("会写入文章 front matter，并显示在首页、归档和搜索结果。")
       .addText((text) => {
@@ -775,11 +775,15 @@ class PublishPostModal extends Modal {
           .setValue(this.metadata.category)
           .onChange((value) => {
             this.metadata.category = value;
+            titleSetting.settingEl.style.display = value === "moments" ? "none" : "";
+            summarySetting.settingEl.style.display = value === "moments" ? "none" : "";
             this.renderPreview();
           });
       });
 
-    new Setting(contentEl)
+    titleSetting.settingEl.style.display = this.metadata.category === "moments" ? "none" : "";
+
+    const summarySetting = new Setting(contentEl)
       .setName("简介")
       .setDesc("一句话摘要，会显示在列表、搜索和文章元信息里。moments 可留空。")
       .addTextArea((text) => {
@@ -792,6 +796,8 @@ class PublishPostModal extends Modal {
           });
         text.inputEl.addClass("sakura-publisher-summary-input");
       });
+
+    summarySetting.settingEl.style.display = this.metadata.category === "moments" ? "none" : "";
 
     const coverSetting = new Setting(contentEl)
       .setName("选择封面图")
@@ -1159,7 +1165,7 @@ class ManageContentModal extends Modal {
       text: `当前草稿：${this.draft.displayPath}`
     });
 
-    new Setting(this.publishContainer)
+    const mcTitleSetting = new Setting(this.publishContainer)
       .setName("标题")
       .addText((text) => {
         text
@@ -1168,16 +1174,22 @@ class ManageContentModal extends Modal {
           .onChange((value) => { this.publishMeta.title = value.trim(); });
       });
 
-    new Setting(this.publishContainer)
+    const mcCategorySetting = new Setting(this.publishContainer)
       .setName("板块")
       .addDropdown((dropdown) => {
         CATEGORIES.forEach((c) => dropdown.addOption(c, c));
         dropdown
           .setValue(this.publishMeta.category)
-          .onChange((value) => { this.publishMeta.category = value; });
+          .onChange((value) => {
+            this.publishMeta.category = value;
+            mcTitleSetting.settingEl.style.display = value === "moments" ? "none" : "";
+            mcSummarySetting.settingEl.style.display = value === "moments" ? "none" : "";
+          });
       });
 
-    new Setting(this.publishContainer)
+    mcTitleSetting.settingEl.style.display = this.publishMeta.category === "moments" ? "none" : "";
+
+    const mcSummarySetting = new Setting(this.publishContainer)
       .setName("简介")
       .setDesc("moments 可留空")
       .addTextArea((text) => {
@@ -1187,6 +1199,8 @@ class ManageContentModal extends Modal {
           .onChange((value) => { this.publishMeta.summary = value.trim(); });
         text.inputEl.addClass("sakura-publisher-summary-input");
       });
+
+    mcSummarySetting.settingEl.style.display = this.publishMeta.category === "moments" ? "none" : "";
 
     const coverSetting = new Setting(this.publishContainer)
       .setName("封面图");

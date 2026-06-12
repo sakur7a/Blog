@@ -10,9 +10,6 @@ header_image: "/assets/images/site/wallhaven-6l21lx-1778342041220.png"
 <div class="moments-list">
   {% for moment in moments %}
     <article class="moment-card">
-      {% if moment.title %}
-        <h3 class="moment-title">{{ moment.title }}</h3>
-      {% endif %}
       <div class="moment-body">{{ moment.content }}</div>
       <time class="moment-date" datetime="{{ moment.date | date_to_xmlschema }}">{{ moment.date | date: "%m-%d" }}</time>
     </article>

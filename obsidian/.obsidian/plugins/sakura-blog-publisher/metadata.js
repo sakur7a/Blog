@@ -59,12 +59,12 @@ function applyMetadata(content, metadata) {
   const { yaml, body } = splitFrontMatter(content);
   let nextYaml = yaml;
   const isMoments = metadata.category === "moments";
-  if (metadata.title || !isMoments) {
-    nextYaml = writeYamlValue(nextYaml, "title", quoteYaml(metadata.title || ""));
+  if (!isMoments && metadata.title) {
+    nextYaml = writeYamlValue(nextYaml, "title", quoteYaml(metadata.title));
   }
   nextYaml = writeYamlValue(nextYaml, "categories", `[${metadata.category}]`);
-  if (metadata.summary || !isMoments) {
-    nextYaml = writeYamlValue(nextYaml, "summary", quoteYaml(metadata.summary || ""));
+  if (!isMoments && metadata.summary) {
+    nextYaml = writeYamlValue(nextYaml, "summary", quoteYaml(metadata.summary));
   }
   return `---\n${nextYaml.trim()}\n---\n\n${body.trimStart()}`;
 }

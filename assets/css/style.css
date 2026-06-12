@@ -1063,14 +1063,6 @@ button,
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
-.moment-title {
-  margin: 0 0 8px;
-  color: var(--strong);
-  font-size: 18px;
-  line-height: 1.4;
-  font-weight: 700;
-}
-
 .moment-body {
   color: var(--text);
   font-size: 15px;

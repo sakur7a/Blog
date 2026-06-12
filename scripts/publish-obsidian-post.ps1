@@ -193,25 +193,28 @@ if ($existing) {
   }
 }
 
-$summary = Get-YamlValue -Yaml $yaml -Key "summary"
-if ([string]::IsNullOrWhiteSpace($summary)) {
-  $plain = ($body -replace '(?s)!\[\[.*?\]\]', '' -replace '(?s)!\[.*?\]\(.*?\)', '' -replace '[#>*_\[\]-]', '').Trim()
-  $firstLine = ($plain -split "\r?\n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1)
-  if ([string]::IsNullOrWhiteSpace($firstLine)) {
-    $firstLine = "New post"
-  }
-  $summary = if ($firstLine.Length -gt 80) { $firstLine.Substring(0, 80) } else { $firstLine }
-}
-
-$yaml = Set-YamlValue -Yaml $yaml -Key "title" -Value ('"{0}"' -f $title)
-$yaml = Set-YamlValue -Yaml $yaml -Key "date" -Value $dateValue
-$yaml = Set-YamlValue -Yaml $yaml -Key "slug" -Value $slug
 $categories = Get-YamlValue -Yaml $yaml -Key "categories"
 if ([string]::IsNullOrWhiteSpace($categories)) {
   $categories = "[" + [char]0x968F + [char]0x7B14 + "]"
 }
 $yaml = Set-YamlValue -Yaml $yaml -Key "categories" -Value $categories
-$yaml = Set-YamlValue -Yaml $yaml -Key "summary" -Value ('"{0}"' -f $summary)
+$yaml = Set-YamlValue -Yaml $yaml -Key "date" -Value $dateValue
+$yaml = Set-YamlValue -Yaml $yaml -Key "slug" -Value $slug
+
+$isMoments = $categories -match "moments"
+if (-not $isMoments) {
+  $summary = Get-YamlValue -Yaml $yaml -Key "summary"
+  if ([string]::IsNullOrWhiteSpace($summary)) {
+    $plain = ($body -replace '(?s)!\[\[.*?\]\]', '' -replace '(?s)!\[.*?\]\(.*?\)', '' -replace '[#>*_\[\]-]', '').Trim()
+    $firstLine = ($plain -split "\r?\n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1)
+    if ([string]::IsNullOrWhiteSpace($firstLine)) {
+      $firstLine = "New post"
+    }
+    $summary = if ($firstLine.Length -gt 80) { $firstLine.Substring(0, 80) } else { $firstLine }
+  }
+  $yaml = Set-YamlValue -Yaml $yaml -Key "title" -Value ('"{0}"' -f $title)
+  $yaml = Set-YamlValue -Yaml $yaml -Key "summary" -Value ('"{0}"' -f $summary)
+}
 
 $assetDirRelative = "assets/images/posts/$datePrefix-$slug"
 $assetDir = Join-Path $root $assetDirRelative
