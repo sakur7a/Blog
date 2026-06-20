@@ -11,7 +11,7 @@ header_image: "/assets/images/site/wallhaven-6l21lx-1778342041220.png"
   {% for moment in moments %}
     <article class="moment-card">
       <div class="moment-body">{{ moment.content }}</div>
-      <time class="moment-date" datetime="{{ moment.date | date_to_xmlschema }}">{{ moment.date | date: "%m-%d" }}</time>
+      <time class="moment-date" datetime="{{ moment.date | date_to_xmlschema }}">{{ moment.date | date: "%m-%d %H:%M" }}</time>
     </article>
   {% endfor %}
 
