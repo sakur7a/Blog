@@ -17,6 +17,12 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$script:Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+function Write-Elapsed {
+  $elapsed = $script:Stopwatch.Elapsed
+  Write-Host "  ⏱ $([math]::Round($elapsed.TotalSeconds, 1))s elapsed"
+}
 
 function Convert-ToSlug {
   param([string]$Value)
@@ -271,13 +277,18 @@ $body = [regex]::Replace($body, '!\[([^\]]*)\]\(([^)]+)\)', {
 })
 
 # --- Image compression ---
-$compressResult = & node scripts/compress-images.js --dir $assetDir 2>&1
-$compressResult | ForEach-Object { Write-Host $_ }
-$webpMapping = @()
-$mappingLine = ($compressResult | Where-Object { $_ -match '^__MAPPING__' } | Select-Object -Last 1)
-if ($mappingLine) {
-  $mappingJson = $mappingLine -replace '^__MAPPING__', ''
-  $webpMapping = $mappingJson | ConvertFrom-Json
+try {
+  $compressResult = & node scripts/compress-images.js --dir $assetDir 2>&1
+  $compressResult | ForEach-Object { Write-Host $_ }
+  $webpMapping = @()
+  $mappingLine = ($compressResult | Where-Object { $_ -match '^__MAPPING__' } | Select-Object -Last 1)
+  if ($mappingLine) {
+    $mappingJson = $mappingLine -replace '^__MAPPING__', ''
+    $webpMapping = $mappingJson | ConvertFrom-Json
+  }
+} catch {
+  Write-Warning "图片压缩失败（文章仍会正常发布）：$($_.Exception.Message)"
+  $webpMapping = @()
 }
 
 # Replace compressed image references with WebP paths (originals deleted)
@@ -349,3 +360,4 @@ if (-not $NoCommit) {
 }
 
 Write-Host "Published: $postPath"
+Write-Elapsed

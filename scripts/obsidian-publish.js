@@ -29,7 +29,7 @@ function parseArgs(argv) {
     } else if (arg === "--date") {
       options.date = argv[index + 1] || "";
       index += 1;
-    } else if (arg === "--slug") {
+    } else if (arg === "--slug" || arg === "--slug-override") {
       options.slug = argv[index + 1] || "";
       index += 1;
     } else if (arg === "--no-commit") {

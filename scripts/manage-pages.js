@@ -93,6 +93,44 @@ function setHeaderImage(pagePath, imageUrl, position) {
   process.stdout.write("ok");
 }
 
+function deletePage(pagePath) {
+  const fullPath = path.join(root, pagePath);
+  if (!fs.existsSync(fullPath)) {
+    process.stderr.write(`文件不存在：${pagePath}`);
+    process.exit(1);
+  }
+
+  const stat = fs.statSync(fullPath);
+  if (!stat.isFile()) {
+    process.stderr.write(`不是文件：${pagePath}`);
+    process.exit(1);
+  }
+
+  const content = fs.readFileSync(fullPath, "utf8").replace(/^﻿/, "");
+  const { yaml } = splitFrontMatter(content);
+  const layout = readYamlValue(yaml, "layout");
+  if (layout !== "page") {
+    process.stderr.write(`只有独立页面（layout: page）才能通过此命令删除：${pagePath}`);
+    process.exit(1);
+  }
+
+  fs.rmSync(fullPath, { force: true });
+
+  try {
+    execSync("git add -A", { cwd: root, stdio: "pipe" });
+    const staged = execSync("git diff --cached --name-only", { cwd: root, stdio: ["pipe", "pipe", "pipe"] }).toString().trim();
+    if (staged) {
+      const pageName = path.basename(pagePath, path.extname(pagePath));
+      execSync(`git commit -m "page: delete ${pageName}"`, { cwd: root, stdio: "pipe" });
+      execSync("git -c http.sslBackend=openssl push origin main", { cwd: root, stdio: "pipe" });
+    }
+    process.stdout.write(JSON.stringify({ deleted: pagePath }));
+  } catch (error) {
+    process.stderr.write(error.message || "删除后推送失败");
+    process.exit(1);
+  }
+}
+
 function pushPages() {
   try {
     execSync("git add -A", { cwd: root, stdio: "pipe" });
@@ -127,6 +165,14 @@ if (command === "list") {
   createPage(title);
 } else if (command === "push") {
   pushPages();
+} else if (command === "delete") {
+  const pageIndex = args.indexOf("--page");
+  const page = pageIndex !== -1 ? args[pageIndex + 1] : "";
+  if (!page) {
+    process.stderr.write("缺少 --page 参数");
+    process.exit(1);
+  }
+  deletePage(page);
 } else if (command === "set-header-image") {
   const pageIndex = args.indexOf("--page");
   const imageIndex = args.indexOf("--image");
@@ -140,6 +186,6 @@ if (command === "list") {
   }
   setHeaderImage(page, image, position);
 } else {
-  process.stderr.write(`未知命令：${command}\n用法：manage-pages.js <list|create|push>`);
+  process.stderr.write(`未知命令：${command}\n用法：manage-pages.js <list|create|delete|push|set-header-image>`);
   process.exit(1);
 }

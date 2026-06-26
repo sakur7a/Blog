@@ -51,6 +51,16 @@ function firstSummary(body) {
   return plain.length > 80 ? plain.slice(0, 80) : plain;
 }
 
+function titleToSlug(title) {
+  return (title || "")
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "post";
+}
+
 function fileTitle(filePath) {
   const name = String(filePath || "新文章.md").split(/[\\/]/).pop().replace(/\.md$/i, "");
   return name || "新文章";
@@ -65,7 +75,8 @@ function extractMetadata(content, filePath) {
   const title = readYamlValue(yaml, "title") || (isMoments ? "" : fileTitle(filePath));
   const summary = readYamlValue(yaml, "summary") || (isMoments ? "" : firstSummary(body));
   const coverPosition = readYamlValue(yaml, "cover_position") || "50% 50%";
-  return { title, summary, category, coverPosition };
+  const slug = readYamlValue(yaml, "slug") || "";
+  return { title, summary, category, coverPosition, slug };
 }
 
 function applyMetadata(content, metadata) {
@@ -81,6 +92,9 @@ function applyMetadata(content, metadata) {
   }
   if (!isMoments && metadata.coverPosition) {
     nextYaml = writeYamlValue(nextYaml, "cover_position", quoteYaml(metadata.coverPosition));
+  }
+  if (metadata.slug) {
+    nextYaml = writeYamlValue(nextYaml, "slug", metadata.slug);
   }
   return `---\n${nextYaml.trim()}\n---\n\n${body.trimStart()}`;
 }
@@ -214,6 +228,14 @@ module.exports = class SakuraBlogPublisher extends Plugin {
       args.push(metadata.coverPath);
       args.push("--cover-position");
       args.push(metadata.coverPosition || "50% 50%");
+    }
+
+    if (metadata.slug) {
+      args.push("--slug-override", metadata.slug);
+    }
+
+    if (metadata.dateOverride) {
+      args.push("--date", metadata.dateOverride);
     }
 
     if (preview) {
@@ -392,6 +414,17 @@ module.exports = class SakuraBlogPublisher extends Plugin {
       args.push("--position", position);
     }
     await this.runNode(args);
+  }
+
+  async deletePage(pagePath, pageTitle) {
+    new Notice(`开始删除页面：${pageTitle}`);
+    try {
+      await this.runNode(["scripts/manage-pages.js", "delete", "--page", pagePath]);
+      new Notice(`页面已删除并推送：${pageTitle}`);
+    } catch (error) {
+      console.error(error);
+      new Notice(`删除页面失败：${error.message}`);
+    }
   }
 
   async openPageFile(pagePath) {
@@ -736,9 +769,12 @@ class PublishPostModal extends Modal {
       title: draft.metadata.title || "",
       summary: draft.metadata.summary || "",
       category: CATEGORIES.includes(draft.metadata.category) ? draft.metadata.category : "随笔",
+      slug: draft.metadata.slug || "",
+      dateOverride: "",
       coverPath: "",
       coverPosition: draft.metadata.coverPosition || "50% 50%"
     };
+    this.slugManualPublish = !!this.metadata.slug;
   }
 
   onOpen() {
@@ -777,11 +813,59 @@ class PublishPostModal extends Modal {
             this.metadata.category = value;
             titleSetting.settingEl.style.display = value === "moments" ? "none" : "";
             summarySetting.settingEl.style.display = value === "moments" ? "none" : "";
+            if (momentsHint) momentsHint.style.display = value === "moments" ? "" : "none";
             this.renderPreview();
           });
       });
 
     titleSetting.settingEl.style.display = this.metadata.category === "moments" ? "none" : "";
+
+    this.slugInputEl = null;
+    new Setting(contentEl)
+      .setName("Slug")
+      .setDesc("文章 URL 标识，默认从标题自动生成。手动修改后不再跟随标题变化。")
+      .addText((text) => {
+        text
+          .setPlaceholder("article-slug")
+          .setValue(this.metadata.slug || titleToSlug(this.metadata.title))
+          .onChange((value) => {
+            this.slugManualPublish = true;
+            this.metadata.slug = value.trim();
+          });
+        this.slugInputEl = text.inputEl;
+      });
+
+    // Sync slug from title unless manually edited
+    const origTitleChange = this.metadata.title;
+    const slugSettingEl = contentEl.lastChild;
+
+    new Setting(contentEl)
+      .setName("日期覆盖")
+      .setDesc("可选，格式 YYYY-MM-DD HH:MM。留空使用当前时间。")
+      .addText((text) => {
+        text
+          .setPlaceholder("例如：2026-06-26 17:08")
+          .onChange((value) => { this.metadata.dateOverride = value.trim(); });
+      });
+
+    // Moments hint
+    const momentsHint = contentEl.createDiv({
+      cls: "sakura-publisher-hint",
+      text: "Moments 不使用标题和简介，正文内容直接展示在时间线上。"
+    });
+    momentsHint.style.display = this.metadata.category === "moments" ? "" : "none";
+
+    // Override title onChange to sync slug when not manual
+    const titleInput = contentEl.querySelector(".sakura-publisher-title-input");
+    if (titleInput) {
+      const origHandler = titleInput.oninput;
+      titleInput.addEventListener("input", () => {
+        if (!this.slugManualPublish && this.slugInputEl) {
+          this.slugInputEl.value = titleToSlug(this.metadata.title);
+          this.metadata.slug = this.slugInputEl.value;
+        }
+      });
+    }
 
     const summarySetting = new Setting(contentEl)
       .setName("简介")
@@ -962,6 +1046,10 @@ class PublishPostModal extends Modal {
     }
 
     this.close();
+    // Ensure slug is set even if user didn't manually edit
+    if (!this.metadata.slug) {
+      this.metadata.slug = titleToSlug(this.metadata.title);
+    }
     await this.plugin.publishDraft(this.draft, this.metadata, { preview });
   }
 
@@ -1071,8 +1159,10 @@ class ManageContentModal extends Modal {
     this.activeTab = options.defaultTab || "publish";
     this.searchQuery = "";
     this.sortMode = "date-desc";
+    this.categoryFilter = "全部";
     this.draft = null;
     this.publishMeta = null;
+    this.slugManual = false;
   }
 
   async onOpen() {
@@ -1118,6 +1208,16 @@ class ManageContentModal extends Modal {
     const toolbar = this.toolbarEl;
     this.statsEl = toolbar.createSpan({ cls: "sakura-manager-stats", text: "" });
 
+    this.categoryFilterEl = toolbar.createEl("select", { cls: "sakura-manager-filter" });
+    this.categoryFilterEl.createEl("option", { value: "全部", text: "全部分类" });
+    CATEGORIES.forEach((c) => {
+      this.categoryFilterEl.createEl("option", { value: c, text: c });
+    });
+    this.categoryFilterEl.addEventListener("change", () => {
+      this.categoryFilter = this.categoryFilterEl.value;
+      this.renderCurrentTab();
+    });
+
     this.searchInput = toolbar.createEl("input", {
       cls: "sakura-manager-search",
       attr: { type: "text", placeholder: "搜索标题..." }
@@ -1152,13 +1252,25 @@ class ManageContentModal extends Modal {
       return;
     }
 
+    // Check if already published
+    const publishedPath = path.join(this.plugin.settings.blogRoot, "obsidian", "Published", path.basename(this.draft.file.path));
+    if (fs.existsSync(publishedPath)) {
+      this.publishContainer.createDiv({
+        cls: "sakura-publisher-published-badge",
+        text: "✓ 本文已发布过，再次发布会更新已有文章。"
+      });
+    }
+
     this.publishMeta = {
       title: this.draft.metadata.title || "",
       summary: this.draft.metadata.summary || "",
       category: CATEGORIES.includes(this.draft.metadata.category) ? this.draft.metadata.category : "随笔",
+      slug: this.draft.metadata.slug || "",
+      dateOverride: "",
       coverPath: "",
       coverPosition: this.draft.metadata.coverPosition || "50% 50%"
     };
+    this.slugManual = !!this.publishMeta.slug;
 
     this.publishContainer.createEl("p", {
       cls: "sakura-publisher-desc",
@@ -1171,7 +1283,38 @@ class ManageContentModal extends Modal {
         text
           .setPlaceholder("文章标题")
           .setValue(this.publishMeta.title)
-          .onChange((value) => { this.publishMeta.title = value.trim(); });
+          .onChange((value) => {
+            this.publishMeta.title = value.trim();
+            if (!this.slugManual) {
+              this.slugInput.value = titleToSlug(this.publishMeta.title);
+              this.publishMeta.slug = this.slugInput.value;
+            }
+          });
+      });
+
+    // Slug field
+    const mcSlugSetting = new Setting(this.publishContainer)
+      .setName("Slug")
+      .setDesc("文章 URL 标识，默认从标题自动生成。手动修改后不再跟随标题变化。");
+    const slugControl = mcSlugSetting.controlEl.createEl("input", {
+      attr: { type: "text", placeholder: "article-slug" }
+    });
+    slugControl.style.width = "100%";
+    slugControl.value = this.publishMeta.slug || titleToSlug(this.publishMeta.title);
+    this.slugInput = slugControl;
+    slugControl.addEventListener("input", () => {
+      this.slugManual = true;
+      this.publishMeta.slug = slugControl.value.trim();
+    });
+
+    // Date override field
+    const mcDateSetting = new Setting(this.publishContainer)
+      .setName("日期")
+      .setDesc("可选，格式 YYYY-MM-DD HH:MM。留空使用当前时间。")
+      .addText((text) => {
+        text
+          .setPlaceholder("例如：2026-06-26 17:08")
+          .onChange((value) => { this.publishMeta.dateOverride = value.trim(); });
       });
 
     const mcCategorySetting = new Setting(this.publishContainer)
@@ -1184,10 +1327,20 @@ class ManageContentModal extends Modal {
             this.publishMeta.category = value;
             mcTitleSetting.settingEl.style.display = value === "moments" ? "none" : "";
             mcSummarySetting.settingEl.style.display = value === "moments" ? "none" : "";
+            if (this.momentsHintEl) {
+              this.momentsHintEl.style.display = value === "moments" ? "" : "none";
+            }
           });
       });
 
     mcTitleSetting.settingEl.style.display = this.publishMeta.category === "moments" ? "none" : "";
+
+    // Moments hint
+    this.momentsHintEl = this.publishContainer.createDiv({
+      cls: "sakura-publisher-hint",
+      text: "Moments 不使用标题和简介，正文内容直接展示在时间线上。"
+    });
+    this.momentsHintEl.style.display = this.publishMeta.category === "moments" ? "" : "none";
 
     const mcSummarySetting = new Setting(this.publishContainer)
       .setName("简介")
@@ -1287,6 +1440,10 @@ class ManageContentModal extends Modal {
       new Notice("请先填写简介。");
       return;
     }
+    // Ensure slug is set even if user didn't manually edit
+    if (!this.publishMeta.slug) {
+      this.publishMeta.slug = titleToSlug(this.publishMeta.title);
+    }
     this.close();
     await this.plugin.publishDraft(this.draft, this.publishMeta, { preview });
   }
@@ -1330,8 +1487,11 @@ class ManageContentModal extends Modal {
     this.postsContainer.style.display = tab === "posts" ? "" : "none";
     this.pagesContainer.style.display = tab === "pages" ? "" : "none";
 
-    // show/hide toolbar
+    // show/hide toolbar + category filter
     this.toolbarEl.style.display = tab === "publish" ? "none" : "";
+    if (this.categoryFilterEl) {
+      this.categoryFilterEl.style.display = tab === "posts" ? "" : "none";
+    }
 
     if (tab === "publish") {
       this.renderPublishForm();
@@ -1419,7 +1579,11 @@ class ManageContentModal extends Modal {
 
   renderPosts() {
     this.listEl.empty();
-    const filtered = this.filterList(this.posts, ["title", "summary", "slug"]);
+    let filtered = this.filterList(this.posts, ["title", "summary", "slug"]);
+    // Category filter
+    if (this.categoryFilter && this.categoryFilter !== "全部") {
+      filtered = filtered.filter((p) => (p.category || "随笔") === this.categoryFilter);
+    }
     const sorted = this.sortPosts(filtered);
 
     if (!this.posts.length) {
@@ -1445,7 +1609,11 @@ class ManageContentModal extends Modal {
       const meta = card.createDiv({ cls: "sakura-manager-card-meta" });
       meta.createSpan({ text: post.date || "无日期" });
       if (post.summary) {
-        meta.createSpan({ text: post.summary });
+        const summarySpan = meta.createSpan({ text: post.summary });
+        summarySpan.style.overflow = "hidden";
+        summarySpan.style.textOverflow = "ellipsis";
+        summarySpan.style.whiteSpace = "nowrap";
+        summarySpan.style.maxWidth = "240px";
       }
 
       const actions = card.createDiv({ cls: "sakura-manager-card-actions" });
@@ -1460,6 +1628,9 @@ class ManageContentModal extends Modal {
 
       const republishButton = actions.createEl("button", { text: "重新发布" });
       republishButton.disabled = !post.sourcePath;
+      if (!post.sourcePath) {
+        republishButton.setAttr("title", "找不到源稿（obsidian/Published 目录中无对应文件），请手动发布。");
+      }
       republishButton.addEventListener("click", async () => {
         await this.plugin.republishManagedPost(post);
         await this.loadPosts();
@@ -1541,6 +1712,9 @@ class ManageContentModal extends Modal {
 
       const header = card.createDiv({ cls: "sakura-manager-card-header" });
       header.createEl("h3", { cls: "sakura-manager-card-title", text: page.title });
+      if (page.headerImage) {
+        header.createSpan({ cls: "sakura-manager-has-image", text: "🖼 有头图" });
+      }
 
       const meta = card.createDiv({ cls: "sakura-manager-card-meta" });
       meta.createSpan({ text: page.path });
@@ -1586,6 +1760,28 @@ class ManageContentModal extends Modal {
           }
         });
         input.click();
+      });
+
+      const deletePageBtn = actions.createEl("button", { text: "删除" });
+      deletePageBtn.addClass("sakura-manager-danger");
+      deletePageBtn.addEventListener("click", () => {
+        const confirmModal = new Modal(this.app);
+        confirmModal.onOpen = () => {
+          confirmModal.contentEl.empty();
+          confirmModal.contentEl.createEl("h2", { text: "确认删除页面" });
+          confirmModal.contentEl.createEl("p", { text: `即将删除：${page.title}` });
+          confirmModal.contentEl.createEl("p", { text: page.path, cls: "sakura-publisher-desc" });
+          const btns = confirmModal.contentEl.createDiv({ cls: "sakura-publisher-actions" });
+          btns.createEl("button", { text: "取消" }).addEventListener("click", () => confirmModal.close());
+          const confirmBtn = btns.createEl("button", { text: "确认删除并推送" });
+          confirmBtn.addClass("sakura-manager-danger");
+          confirmBtn.addEventListener("click", async () => {
+            confirmModal.close();
+            await this.plugin.deletePage(page.path, page.title);
+            await this.loadPages();
+          });
+        };
+        confirmModal.open();
       });
     });
   }
