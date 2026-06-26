@@ -283,7 +283,7 @@ if ($mappingLine) {
 # Replace compressed image references with WebP paths (originals deleted)
 if ($webpMapping -and $webpMapping.PSObject.Properties.Count -gt 0) {
   foreach ($prop in $webpMapping.PSObject.Properties) {
-    $origName = [regex]::Escape($prop.Name)
+    $origName = $prop.Name
     $webpName = $prop.Value
     $escapedRel = [regex]::Escape("$assetDirRelative/$origName")
     $webpRel = "$assetDirRelative/$webpName"
