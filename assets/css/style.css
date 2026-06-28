@@ -1190,6 +1190,24 @@ button,
     font-size: 22px;
   }
 
+  .header-item-title {
+    padding-right: 12px;
+  }
+
+  .header-item-left {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .header-item-left a {
+    font-size: 14px;
+  }
+
+  .header-item {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
   .header-item a {
     font-size: 15px;
   }
