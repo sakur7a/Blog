@@ -779,6 +779,25 @@ pre span::selection {
 
 pre {
   user-select: text;
+  font-family: var(--mono-font);
+  font-size: 13px;
+  line-height: 1.6;
+  background: var(--panel);
+  color: var(--text);
+  padding: 14px 18px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  overflow-x: auto;
+  tab-size: 4;
+}
+
+pre code {
+  font-family: inherit;
+  font-size: inherit;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
 }
 
 button,
@@ -806,6 +825,94 @@ button,
   margin: 0;
   border: none;
   border-radius: 0;
+}
+
+/* ── Callout blocks (Obsidian [!note] style) ── */
+.callout {
+  margin: 18px 0;
+  padding: 14px 18px;
+  border-radius: 8px;
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.callout-title {
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--strong);
+  font-size: 15px;
+}
+
+.callout p {
+  margin: 6px 0;
+}
+
+.callout-note {
+  border-left-color: #5d46a8;
+  background: rgba(93, 70, 168, 0.06);
+}
+
+html[data-theme="dark"] .callout-note {
+  background: rgba(196, 181, 253, 0.08);
+}
+
+.callout-warning {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.06);
+}
+
+html[data-theme="dark"] .callout-warning {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.callout-tip {
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.06);
+}
+
+html[data-theme="dark"] .callout-tip {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.callout-danger {
+  border-left-color: #ef4444;
+  background: rgba(239, 68, 68, 0.06);
+}
+
+html[data-theme="dark"] .callout-danger {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.callout-info {
+  border-left-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.06);
+}
+
+html[data-theme="dark"] .callout-info {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.callout-example,
+.callout-abstract {
+  border-left-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.06);
+}
+
+html[data-theme="dark"] .callout-example,
+html[data-theme="dark"] .callout-abstract {
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.callout-question {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.06);
+}
+
+html[data-theme="dark"] .callout-question {
+  background: rgba(245, 158, 11, 0.08);
 }
 
 .highlight-dots {
