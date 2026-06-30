@@ -17,7 +17,26 @@ module Jekyll
       site.pages.each     { |page| page.content = convert(page.content) }
     end
 
+    # Auto-detect bare code fences and add C language for syntax highlighting
+    def add_code_language(markdown)
+      in_block = false
+      markdown.lines.map do |line|
+        if line =~ /^```\s*$/
+          if in_block
+            in_block = false
+            line
+          else
+            in_block = true
+            "```c\n"
+          end
+        else
+          line
+        end
+      end.join
+    end
+
     def convert(markdown)
+      markdown = add_code_language(markdown)
       lines = markdown.lines
       result = []
       i = 0
