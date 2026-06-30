@@ -722,9 +722,9 @@ body#post-index {
 }
 
 .entry-content mjx-container:not([display="true"]) {
-  display: inline-grid;
+  display: inline;
   max-width: 100%;
-  vertical-align: -0.12em;
+  vertical-align: baseline;
 }
 
 .entry-content table {
