@@ -783,13 +783,13 @@ pre {
 
 /* ── Code Blocks (theme-aware) ── */
 :root {
-  --cb-bg: #f5f4f9;
+  --cb-bg: var(--paper);
   --cb-fg: #1e1d2b;
   --cb-line: rgba(0, 0, 0, 0.06);
   --cb-meta: rgba(0, 0, 0, 0.35);
 }
 html[data-theme="dark"] {
-  --cb-bg: #15141b;
+  --cb-bg: var(--paper);
   --cb-fg: #edecee;
   --cb-line: rgba(237, 236, 238, 0.08);
   --cb-meta: rgba(237, 236, 238, 0.45);
