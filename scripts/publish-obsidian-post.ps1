@@ -205,7 +205,7 @@ if ([string]::IsNullOrWhiteSpace($categories)) {
 }
 $yaml = Set-YamlValue -Yaml $yaml -Key "categories" -Value $categories
 $yaml = Set-YamlValue -Yaml $yaml -Key "date" -Value $dateValue
-$yaml = Set-YamlValue -Yaml $yaml -Key "slug" -Value $slug
+$yaml = Set-YamlValue -Yaml $yaml -Key "slug" -Value ('"{0}"' -f $slug)
 
 $isMoments = $categories -match "moments"
 if (-not $isMoments) {
