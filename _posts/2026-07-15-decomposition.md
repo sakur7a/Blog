@@ -1,9 +1,11 @@
----
+﻿---
 title: "图层分解：总结和思考"
 categories: [学习]
 summary: "从 Qwen-image-layered 出发。对图层分解方向的总结与思考。"
 cover_position: "50% 50%"
-slug: decomposition
+slug: "decomposition"
+date: 2026-07-15 16:10:07 +0800
+cover: "/assets/images/posts/2026-07-15-decomposition/cover.webp"
 ---
 
 # 一、背景
@@ -11,7 +13,7 @@ slug: decomposition
 
 专业设计软件（如 Photoshop）采用**分层（layered）表示**，将图像分解为多个独立可编辑的RGBA 图层，编辑仅作用于目标图层，其他内容物理隔离，从而天然保证一致性。受分层思想的启发，**图层分解（Layer Decomposition）** 的将单张 RGB 图像自动分解为多个语义解耦的 RGBA 图层（每层含 RGB 颜色 + Alpha 透明度通道），实现固有可编辑性（inherent editability）：每层可独立 recolor、replace、resize、reposition、remove 等操作，而不影响其他内容。
 
-![[博客/随笔/2026.7.13 小结/Pasted image 20260714230023.png]]
+![]({{ '/assets/images/posts/2026-07-15-decomposition/Pasted image 20260714230023.webp' | relative_url }})
 图源：Qwen-Image-Layered paper。
 
 ---
@@ -40,7 +42,7 @@ slug: decomposition
 ### 3.1.2 VLD-MMDiT（Variable Layers Decomposition MMDiT）
 支持可变层数。在每个 block 中，将条件图像 $z_I$、噪声状态 $x_t$ 与文本条件拼接，通过 Multi-Modal Attention 同时建模层内与层间交互。引入 **Layer3D RoPE**（在 MSRoPE 基础上增加层维度），条件图像赋 layer index = -1，目标层从 0 开始，支持多任务（T2L / I2L）。
 
-![[博客/随笔/2026.7.13 小结/Pasted image 20260715001007.png]]
+![]({{ '/assets/images/posts/2026-07-15-decomposition/Pasted image 20260715001007.webp' | relative_url }})
 
 ---
 ### 3.1.3 训练
@@ -73,20 +75,20 @@ def infer(input_image,
 
 ### 3.2.1 合理图层的问题
 先来看看第一个问题。同一张图中可以出现多种合理分层方式：
-![[博客/随笔/2026.7.13 小结/Pasted image 20260715003410.png]]
+![]({{ '/assets/images/posts/2026-07-15-decomposition/Pasted image 20260715003410.webp' | relative_url }})
 
 目前几乎所有的研究都没有关注这个问题，ground-truth 一般设定为真实 PSD 文件的层数。在图像评估方面，人本身就具备很强的主观性。很多种分层方式都可以当成合理的结果。可以考虑的因素太多太多。随意举例，如分层标准：可被编辑接受的最小层数 $n_1$、分成最多层 $n_2$（所有单个前景都应该作为单个图层）等。如果以分成最多层为标准，那么层数从 $n_1$ 到 $n_2$ 的结果就可以被视为不合理的分解方式：因为没有遵守标准。但实际上，这样的分层结果视觉上是可以被接受的。
 
 如下面这张图分成最多层：
-![[博客/随笔/2026.7.13 小结/Pasted image 20260715150228.png]]
+![]({{ '/assets/images/posts/2026-07-15-decomposition/Pasted image 20260715150228.webp' | relative_url }})
 
 还有一个问题是，目前 qwen-image-layered 之类的方法倾向于最小的层数，因为如果你指定少了，模型顶多只会倾向不分图层。但如果指定过高的图层，模型会产生虚影和空层。不分图层当然也不好，但视觉上比虚影、空层等明显不合理的分层好接受。惩罚的权重应当不一样。还有考虑速度的问题：将图层的 latent token concat 起来联合去噪，高层数是几乎不能接受的，目前 qwen 这个模型在指定图层 $k = 8$ 时推理大约是五分钟。 
 
 重要的是，上面的所有假设都是基于目前的模型可以完全做好图层分解这个任务这个前提，但实际上远远不够。以 qwen 为例子，在指定的 $N$ 偏离 GT 过多时，模型很容易产生残影或者空层：
-![[博客/随笔/2026.7.13 小结/Pasted image 20260715004801.png]]
+![]({{ '/assets/images/posts/2026-07-15-decomposition/Pasted image 20260715004801.webp' | relative_url }})
 
 一种理想的方式是，将所有图层的分解方法一次性输出，形式非常漂亮，如：
-![[博客/随笔/2026.7.13 小结/Pasted image 20260715005149.png]]
+![]({{ '/assets/images/posts/2026-07-15-decomposition/Pasted image 20260715005149.webp' | relative_url }})
 图源网络。
 
 LayerD 类的迭代方法可能更适合。或者是从用户接入的角度思考、面向编辑的分层等。我其实感觉编辑是最终的任务。当然图层分解这个底层任务有它的作用，比如用户可能需要单独的一个元素作为素材。
@@ -98,12 +100,9 @@ LayerD 类的迭代方法可能更适合。或者是从用户接入的角度思�
 我现在主要关注的两个点，一个是让模型思考再分解，另一个是架构的改进。
 
 这是目前的架构：
-![[博客/随笔/2026.7.13 小结/演示文稿1.png]]
+![]({{ '/assets/images/posts/2026-07-15-decomposition/演示文稿1.png' | relative_url }})
 
-
-![[博客/随笔/2026.7.13 小结/演示文稿1 1.png]]
-
-
+![]({{ '/assets/images/posts/2026-07-15-decomposition/演示文稿1 1.png' | relative_url }})
 
 
 
