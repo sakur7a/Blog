@@ -100,9 +100,9 @@ LayerD 类的迭代方法可能更适合。或者是从用户接入的角度思�
 我现在主要关注的两个点，一个是让模型思考再分解，另一个是架构的改进。
 
 这是目前的架构：
-![]({{ '/assets/images/posts/2026-07-15-decomposition/演示文稿1.png' | relative_url }})
+![]({{ '/assets/images/posts/2026-07-15-decomposition/演示文稿1.webp' | relative_url }})
 
-![]({{ '/assets/images/posts/2026-07-15-decomposition/演示文稿1 1.png' | relative_url }})
+![]({{ '/assets/images/posts/2026-07-15-decomposition/演示文稿1 1.webp' | relative_url }})
 
 
 

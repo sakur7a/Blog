@@ -280,39 +280,39 @@ $body = [regex]::Replace($body, '!\[([^\]]*)\]\(([^)]+)\)', {
 try {
   $compressResult = & node scripts/compress-images.js --dir $assetDir 2>&1
   $compressResult | ForEach-Object { Write-Host $_ }
-  $webpMapping = @()
-  $mappingLine = ($compressResult | Where-Object { $_ -match '^__MAPPING__' } | Select-Object -Last 1)
-  if ($mappingLine) {
-    $mappingJson = $mappingLine -replace '^__MAPPING__', ''
-    $webpMapping = $mappingJson | ConvertFrom-Json
-  }
 } catch {
   Write-Warning "图片压缩失败（文章仍会正常发布）：$($_.Exception.Message)"
-  $webpMapping = @()
 }
 
-# Replace compressed image references with WebP paths (originals deleted)
-if ($webpMapping -and $webpMapping.PSObject.Properties.Count -gt 0) {
-  foreach ($prop in $webpMapping.PSObject.Properties) {
-    $origName = $prop.Name
-    $webpName = $prop.Value
-    $escapedRel = [regex]::Escape("$assetDirRelative/$origName")
-    $webpRel = "$assetDirRelative/$webpName"
-    $pattern = "!\[([^\]]*)\]\(\{\{\s*'/$escapedRel'\s*\|\s*relative_url\s*\}\}\)"
-    $body = [regex]::Replace($body, $pattern, {
-      param($m)
-      $alt = $m.Groups[1].Value
-      "![$alt]({{ '/$webpRel' | relative_url }})"
-    })
-  }
-  # Update cover path if compressed to WebP
-  if ($yaml -match 'cover:\s*"(/assets/images/posts/[^"]+)"') {
-    $coverRel = $matches[1]
-    $coverFile = Split-Path $coverRel -Leaf
-    if ($webpMapping.$coverFile) {
-      $webpCoverRel = $coverRel -replace [regex]::Escape($coverFile), $webpMapping.$coverFile
-      $yaml = $yaml -replace [regex]::Escape($coverRel), $webpCoverRel
+# Replace compressed image references with WebP paths (originals deleted).
+# Rewrite based on what actually exists on disk rather than parsing the node
+# child process stdout: PowerShell decodes external-process output using the
+# console encoding, which mangles non-ASCII (e.g. Chinese) filenames and made
+# the .png -> .webp rewrite silently fail for those references.
+$escapedDir = [regex]::Escape($assetDirRelative)
+$body = [regex]::Replace(
+  $body,
+  "!\[([^\]]*)\]\(\{\{\s*'/$escapedDir/([^']+?)\.(?:png|jpe?g)'\s*\|\s*relative_url\s*\}\}\)",
+  {
+    param($m)
+    $alt = $m.Groups[1].Value
+    $base = $m.Groups[2].Value
+    $webpName = "$base.webp"
+    if (Test-Path -LiteralPath (Join-Path $assetDir $webpName)) {
+      return "![$alt]({{ '/$assetDirRelative/$webpName' | relative_url }})"
     }
+    return $m.Value
+  },
+  [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+)
+
+# Update cover path if compressed to WebP
+if ($yaml -match 'cover:\s*"(/assets/images/posts/[^"]+)\.(?i:png|jpe?g)"') {
+  $coverBase = $matches[1]
+  $coverWebp = "$coverBase.webp"
+  $coverFile = Split-Path $coverWebp -Leaf
+  if (Test-Path -LiteralPath (Join-Path $assetDir $coverFile)) {
+    $yaml = $yaml -replace 'cover:\s*"/assets/images/posts/[^"]+"', ('cover: "{0}"' -f $coverWebp)
   }
 }
 
