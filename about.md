@@ -19,5 +19,5 @@ header_position: "50% 10%"
 如果你想找我交流，欢迎联系我：
 - 邮箱：sakur7a@outlook.com
 - 微信：yueaimuuewq3
-- 歌单：[QQ音乐](ttps://c6.y.qq.com/base/fcgi-bin/u?__=0ArGxPp5xjYV)
+- 歌单：[QQ音乐](https://c6.y.qq.com/base/fcgi-bin/u?__=0ArGxPp5xjYV)
 - GitHub：[sakur7a](https://github.com/sakur7a)
