@@ -199,6 +199,26 @@ if ($existing) {
   }
 }
 
+# If the slug changed (e.g. manually renamed), match the old post by its
+# source draft file or title so the article is replaced, not duplicated.
+$draftLeaf = Split-Path $draftFullPath -Leaf
+$oldPostToRemove = $null
+if (-not $existing) {
+  foreach ($candidate in Get-ChildItem -Path (Join-Path $root "_posts") -File -Filter "*.md" -ErrorAction SilentlyContinue) {
+    $candidateFront = Get-FrontMatter -Content (Get-Content -Raw -Encoding UTF8 -LiteralPath $candidate.FullName)
+    $candidateSource = Get-YamlValue -Yaml $candidateFront.Raw -Key "source_file"
+    $candidateTitle = Get-YamlValue -Yaml $candidateFront.Raw -Key "title"
+    if (($candidateSource -and $candidateSource -eq $draftLeaf) -or ($candidateTitle -and $candidateTitle -eq $title)) {
+      if ($candidate.BaseName -match "^(\d{4}-\d{2}-\d{2})-") {
+        $datePrefix = $Matches[1]
+      }
+      $oldPostToRemove = $candidate
+      Write-Host "Found existing post with same source/title (old slug), replacing: $($candidate.Name)"
+      break
+    }
+  }
+}
+
 $categories = Get-YamlValue -Yaml $yaml -Key "categories"
 if ([string]::IsNullOrWhiteSpace($categories)) {
   $categories = "[" + [char]0x968F + [char]0x7B14 + "]"
@@ -206,6 +226,7 @@ if ([string]::IsNullOrWhiteSpace($categories)) {
 $yaml = Set-YamlValue -Yaml $yaml -Key "categories" -Value $categories
 $yaml = Set-YamlValue -Yaml $yaml -Key "date" -Value $dateValue
 $yaml = Set-YamlValue -Yaml $yaml -Key "slug" -Value ('"{0}"' -f $slug)
+$yaml = Set-YamlValue -Yaml $yaml -Key "source_file" -Value ('"{0}"' -f $draftLeaf)
 
 $isMoments = $categories -match "moments"
 if (-not $isMoments) {
@@ -225,6 +246,27 @@ if (-not $isMoments) {
 $assetDirRelative = "assets/images/posts/$datePrefix-$slug"
 $assetDir = Join-Path $root $assetDirRelative
 New-Item -ItemType Directory -Force -Path $assetDir | Out-Null
+
+# When replacing a post whose slug changed, carry its assets forward so
+# compressed images and the cover survive the rename.
+if ($oldPostToRemove) {
+  $oldAssetDirCarry = Join-Path $root "assets/images/posts/$($oldPostToRemove.BaseName)"
+  if ((Test-Path -LiteralPath $oldAssetDirCarry) -and ($oldAssetDirCarry -ne $assetDir)) {
+    Copy-Item -Path (Join-Path $oldAssetDirCarry "*") -Destination $assetDir -Recurse -Force
+  }
+  if ([string]::IsNullOrWhiteSpace((Get-YamlValue -Yaml $yaml -Key "cover"))) {
+    $oldFront = Get-FrontMatter -Content (Get-Content -Raw -Encoding UTF8 -LiteralPath $oldPostToRemove.FullName)
+    $oldCover = Get-YamlValue -Yaml $oldFront.Raw -Key "cover"
+    if ($oldCover) {
+      $newCover = $oldCover -replace [regex]::Escape("/assets/images/posts/$($oldPostToRemove.BaseName)/"), "/$assetDirRelative/"
+      $yaml = Set-YamlValue -Yaml $yaml -Key "cover" -Value ('"{0}"' -f $newCover)
+      $oldCoverPosition = Get-YamlValue -Yaml $oldFront.Raw -Key "cover_position"
+      if ($oldCoverPosition -and [string]::IsNullOrWhiteSpace((Get-YamlValue -Yaml $yaml -Key "cover_position"))) {
+        $yaml = Set-YamlValue -Yaml $yaml -Key "cover_position" -Value ('"{0}"' -f $oldCoverPosition)
+      }
+    }
+  }
+}
 
 if (-not [string]::IsNullOrWhiteSpace($CoverPath)) {
   $resolvedCoverPath = (Resolve-Path -LiteralPath $CoverPath).Path
@@ -322,6 +364,15 @@ $postRelative = "_posts/$datePrefix-$slug.md"
 $postPath = Join-Path $root $postRelative
 $published = "---`n$($yaml.Trim())`n---`n`n$body`n"
 Set-Content -LiteralPath $postPath -Value $published -Encoding UTF8
+
+if ($oldPostToRemove -and $oldPostToRemove.FullName -ne $postPath) {
+  Remove-Item -LiteralPath $oldPostToRemove.FullName -Force
+  $oldAssetDir = Join-Path $root "assets/images/posts/$($oldPostToRemove.BaseName)"
+  if ((Test-Path -LiteralPath $oldAssetDir) -and ($oldAssetDir -ne $assetDir)) {
+    Remove-Item -LiteralPath $oldAssetDir -Recurse -Force
+  }
+  Write-Host "Removed old post: $($oldPostToRemove.Name)"
+}
 
 $publishedDir = Join-Path $root "obsidian/Published"
 New-Item -ItemType Directory -Force -Path $publishedDir | Out-Null

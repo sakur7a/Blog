@@ -52,13 +52,18 @@ function firstSummary(body) {
 }
 
 function titleToSlug(title) {
-  return (title || "")
+  const slug = (title || "")
     .toLowerCase()
     .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 60) || "post";
+    .slice(0, 60);
+  if (slug) return slug;
+  // Non-ASCII titles (e.g. Chinese) strip to nothing; use a stable hash so
+  // different articles never collide on the same fallback slug.
+  const hash = require("crypto").createHash("sha1").update(title || "post").digest("hex").slice(0, 6);
+  return `post-${hash}`;
 }
 
 function fileTitle(filePath) {
