@@ -4,7 +4,8 @@ categories: [学习]
 summary: "从 Qwen-image-layered 出发。对图层分解方向的总结与思考。"
 cover_position: "50% 50%"
 slug: "decomposition"
-date: 2026-07-31 02:52:49 +0800
+date: 2026-07-31 03:14:16 +0800
+cover: "/assets/images/posts/2026-07-15-decomposition/cover.webp"
 ---
 
 # 一、背景
