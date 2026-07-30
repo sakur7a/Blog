@@ -4,8 +4,7 @@ categories: [学习]
 summary: "从 Qwen-image-layered 出发。对图层分解方向的总结与思考。"
 cover_position: "50% 50%"
 slug: "decomposition"
-date: 2026-07-15 16:10:07 +0800
-cover: "/assets/images/posts/2026-07-15-decomposition/cover.webp"
+date: 2026-07-31 02:52:49 +0800
 ---
 
 # 一、背景
@@ -97,12 +96,15 @@ LayerD 类的迭代方法可能更适合。或者是从用户接入的角度思�
 ### 3.2.2 如何分层
 前面说到目前的模型还做不好分层。我其实一直很逃避，总会想现在是不是堆数据 scale up 上去就足够解决了？自然，即使可以 scale up 上去，方式也是不同的。
 
-我现在主要关注的两个点，一个是让模型思考再分解，另一个是架构的改进。
-
 这是目前的架构：
-![]({{ '/assets/images/posts/2026-07-15-decomposition/演示文稿1.webp' | relative_url }})
+
+![]({{ '/assets/images/posts/2026-07-15-decomposition/Pasted image 20260731025219.webp' | relative_url }})
 
 ![]({{ '/assets/images/posts/2026-07-15-decomposition/演示文稿1 1.webp' | relative_url }})
 
+---
+### 3.2.3 图层分解任务中文本条件的作用
+qwen 对 text prompt 不敏感，改变几乎无作用。单纯的图层分解任务和传统的文生图不同，输入图像是主要的信息来源，文本只是普通的描述，相当于被边缘化了。最新的论文也很少探讨这个问题，如 [[2605.11818v1] RevealLayer: Disentangling Hidden and Visible Layers via Occlusion-Aware Image Decomposition](https://arxiv.org/abs/2605.11818v1)，将文本条件固定为“Decompose the image into foreground and background”。
 
+图像到图层并不是唯一确定的逆问题；样本相关、图层相关的语义条件可以消除分层粒度、对象归属和遮挡补全上的歧义。现有方法虽然保留文本接口
 
