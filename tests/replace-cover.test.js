@@ -127,3 +127,49 @@ test("replaceCover rejects unsupported image types", () => {
     /Unsupported cover image type/
   );
 });
+
+test("replaceCover does not delete a similarly prefixed sibling asset path", () => {
+  const root = makeRoot();
+  const postPath = path.join(root, "_posts", "2026-05-06-ml.md");
+  const siblingDir = path.join(root, "assets", "images", "posts", "2026-05-06-ml-other");
+  fs.mkdirSync(siblingDir, { recursive: true });
+  const siblingCover = path.join(siblingDir, "cover.png");
+  fs.writeFileSync(siblingCover, "do-not-delete", "utf8");
+  fs.writeFileSync(
+    postPath,
+    '---\ntitle: ML\ncover: "/assets/images/posts/2026-05-06-ml-other/cover.png"\n---\nbody',
+    "utf8"
+  );
+  const newCover = path.join(root, "new-cover.jpg");
+  fs.writeFileSync(newCover, "new", "utf8");
+
+  replaceCover(root, "_posts/2026-05-06-ml.md", newCover, {
+    noCommit: true,
+    noPush: true,
+    skipBuild: true
+  });
+
+  assert.equal(fs.readFileSync(siblingCover, "utf8"), "do-not-delete");
+});
+
+test("replaceCover restores the prior post and cover when validation fails", () => {
+  const root = makeRoot();
+  const postPath = path.join(root, "_posts", "2026-05-06-ml.md");
+  const assetDir = path.join(root, "assets", "images", "posts", "2026-05-06-ml");
+  fs.mkdirSync(assetDir, { recursive: true });
+  const oldCover = path.join(assetDir, "cover.png");
+  const originalPost = '---\ntitle: ML\ncover: "/assets/images/posts/2026-05-06-ml/cover.png"\n---\nbody';
+  fs.writeFileSync(oldCover, "old", "utf8");
+  fs.writeFileSync(postPath, originalPost, "utf8");
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ scripts: { build: "node missing.js" } }), "utf8");
+  const newCover = path.join(root, "new-cover.jpg");
+  fs.writeFileSync(newCover, "new", "utf8");
+
+  assert.throws(
+    () => replaceCover(root, "_posts/2026-05-06-ml.md", newCover, { noCommit: true, noPush: true }),
+    /npm failed/
+  );
+  assert.equal(fs.readFileSync(postPath, "utf8"), originalPost);
+  assert.equal(fs.readFileSync(oldCover, "utf8"), "old");
+  assert.equal(fs.existsSync(path.join(assetDir, "cover.jpg")), false);
+});

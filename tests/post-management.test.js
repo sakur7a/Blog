@@ -69,6 +69,20 @@ test("normalizePostPath rejects paths outside _posts", () => {
   assert.throws(() => normalizePostPath(root, "assets/images/demo.png"), /Post path must be inside _posts/);
 });
 
+test("listPosts ignores source_file paths that escape Published", () => {
+  const root = makeRoot();
+  fs.writeFileSync(
+    path.join(root, "_posts", "2026-05-06-demo.md"),
+    '---\ntitle: "Demo"\nsource_file: "../../outside.md"\n---\nbody',
+    "utf8"
+  );
+  fs.writeFileSync(path.join(root, "outside.md"), "outside", "utf8");
+
+  const [post] = listPosts(root);
+
+  assert.equal(post.sourcePath, "");
+});
+
 test("deletePost restores files if build fails", () => {
   const root = makeRoot();
   const postPath = path.join(root, "_posts", "2026-05-06-ml.md");

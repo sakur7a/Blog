@@ -61,7 +61,10 @@ function postInfo(root, fileName, options = {}) {
   const coverPosition = readYamlValue(yaml, "cover_position");
   const postPath = `_posts/${fileName}`;
   const assetPath = `assets/images/posts/${dateSlug}`;
-  const sourceName = readYamlValue(yaml, "source_file") || `${title}.md`;
+  const configuredSource = readYamlValue(yaml, "source_file");
+  const sourceName = configuredSource && path.basename(configuredSource) === configuredSource
+    ? configuredSource
+    : `${title}.md`;
   const sourcePath = fs.existsSync(path.join(root, "obsidian", "Published", sourceName))
     ? `obsidian/Published/${sourceName}`
     : "";

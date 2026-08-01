@@ -38,6 +38,58 @@ function Convert-ToSlug {
   return $slug
 }
 
+function Assert-NativeSuccess {
+  param([string]$Action)
+  if ($LASTEXITCODE -ne 0) {
+    throw "$Action failed with exit code $LASTEXITCODE."
+  }
+}
+
+function Assert-SafeSlug {
+  param([string]$Value)
+  if ($Value.Length -gt 100 -or $Value -notmatch '^[\p{L}\p{Nd}]+(?:-[\p{L}\p{Nd}]+)*$') {
+    throw "Invalid slug '$Value'. Use letters, numbers, and single hyphens only."
+  }
+}
+
+function Get-AssetFileName {
+  param([string]$Reference)
+
+  $leaf = Split-Path $Reference -Leaf
+  $extension = [IO.Path]::GetExtension($leaf)
+  $safeExtension = if ($extension -match '^\.[A-Za-z0-9]+$') { $extension.ToLowerInvariant() } else { "" }
+  $stem = [IO.Path]::GetFileNameWithoutExtension($leaf)
+  $safeStem = ($stem -replace '[^\p{L}\p{Nd}._ -]+', '-').Trim(' ', '-', '.')
+  if ([string]::IsNullOrWhiteSpace($safeStem)) {
+    $safeStem = "image"
+  }
+
+  $normalizedReference = $Reference -replace '\\', '/'
+  $safeLeaf = "$safeStem$safeExtension"
+  if ($normalizedReference.Contains('/') -or $safeLeaf -ne $leaf) {
+    $hashBytes = [System.Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($normalizedReference))
+    $hash = -join ($hashBytes[0..3] | ForEach-Object { $_.ToString("x2") })
+    return "$safeStem-$hash$safeExtension"
+  }
+
+  return $safeLeaf
+}
+
+function Get-MarkdownImageReference {
+  param([string]$Value)
+
+  $reference = $Value.Trim()
+  if ($reference -match '^<(.+)>$') {
+    $reference = $Matches[1]
+  } elseif ($reference -match '^(.*?)(?:\s+["''][^"'']*["''])$') {
+    $reference = $Matches[1].Trim()
+  }
+  if ($reference -match '%[0-9A-Fa-f]{2}') {
+    $reference = [Uri]::UnescapeDataString($reference)
+  }
+  return $reference
+}
+
 function Get-FrontMatter {
   param([string]$Content)
   if ($Content -match "(?s)^---\r?\n(.*?)\r?\n---\r?\n?(.*)$") {
@@ -104,7 +156,7 @@ function Resolve-AttachmentPath {
   $candidates += Join-Path $Root $Reference
 
   foreach ($candidate in $candidates) {
-    if (Test-Path -LiteralPath $candidate) {
+    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
       return (Resolve-Path -LiteralPath $candidate).Path
     }
   }
@@ -114,17 +166,19 @@ function Resolve-AttachmentPath {
   # compresses PNG/JPEG files to WebP. Reuse that exact post-scoped copy before
   # falling back to a repository-wide filename search.
   if ($AssetDir) {
-    $fileName = Split-Path $Reference -Leaf
-    $assetCandidate = Join-Path $AssetDir $fileName
-    if (Test-Path -LiteralPath $assetCandidate) {
-      return (Resolve-Path -LiteralPath $assetCandidate).Path
-    }
+    $assetNames = @((Get-AssetFileName -Reference $Reference), (Split-Path $Reference -Leaf)) | Select-Object -Unique
+    foreach ($assetName in $assetNames) {
+      $assetCandidate = Join-Path $AssetDir $assetName
+      if (Test-Path -LiteralPath $assetCandidate -PathType Leaf) {
+        return (Resolve-Path -LiteralPath $assetCandidate).Path
+      }
 
-    if ([IO.Path]::GetExtension($fileName) -match '^\.(?i:png|jpe?g)$') {
-      $webpName = [IO.Path]::GetFileNameWithoutExtension($fileName) + ".webp"
-      $webpCandidate = Join-Path $AssetDir $webpName
-      if (Test-Path -LiteralPath $webpCandidate) {
-        return (Resolve-Path -LiteralPath $webpCandidate).Path
+      if ([IO.Path]::GetExtension($assetName) -match '^\.(?i:png|jpe?g)$') {
+        $webpName = [IO.Path]::GetFileNameWithoutExtension($assetName) + ".webp"
+        $webpCandidate = Join-Path $AssetDir $webpName
+        if (Test-Path -LiteralPath $webpCandidate -PathType Leaf) {
+          return (Resolve-Path -LiteralPath $webpCandidate).Path
+        }
       }
     }
   }
@@ -153,13 +207,15 @@ function Resolve-AttachmentPath {
 function Write-PreviewManifest {
   param(
     [string]$Root,
-    [string[]]$Paths
+    [string[]]$Paths,
+    [string[]]$PreservePaths = @()
   )
 
   $manifestPath = Join-Path $Root ".obsidian-preview.json"
   $manifest = @{
     createdAt = (Get-Date).ToString("o")
-    paths = $Paths
+    paths = @($Paths)
+    preservePaths = @($PreservePaths)
   }
   $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 }
@@ -207,10 +263,15 @@ if (-not [string]::IsNullOrWhiteSpace($SlugOverride)) {
 if ([string]::IsNullOrWhiteSpace($slug)) {
   $slug = Convert-ToSlug -Value $title
 }
+Assert-SafeSlug -Value $slug
 
 # If a post with the same slug already exists, reuse its date prefix
 # so re-publishing updates the same file instead of creating a duplicate.
-$existing = Get-ChildItem -Path (Join-Path $root "_posts") -File -Filter "*-$slug.md" -ErrorAction SilentlyContinue | Select-Object -First 1
+$existingMatches = @(Get-ChildItem -Path (Join-Path $root "_posts") -File -Filter "*-$slug.md" -ErrorAction SilentlyContinue)
+if ($existingMatches.Count -gt 1) {
+  throw "Multiple published posts use slug '$slug'. Resolve the duplicate slugs before publishing."
+}
+$existing = $existingMatches | Select-Object -First 1
 if ($existing) {
   $existingPrefix = if ($existing.BaseName -match "^(\d{4}-\d{2}-\d{2})-") { $Matches[1] } else { $null }
   if ($existingPrefix) {
@@ -224,18 +285,24 @@ if ($existing) {
 $draftLeaf = Split-Path $draftFullPath -Leaf
 $oldPostToRemove = $null
 if (-not $existing) {
+  $identityMatches = @()
   foreach ($candidate in Get-ChildItem -Path (Join-Path $root "_posts") -File -Filter "*.md" -ErrorAction SilentlyContinue) {
     $candidateFront = Get-FrontMatter -Content (Get-Content -Raw -Encoding UTF8 -LiteralPath $candidate.FullName)
     $candidateSource = Get-YamlValue -Yaml $candidateFront.Raw -Key "source_file"
     $candidateTitle = Get-YamlValue -Yaml $candidateFront.Raw -Key "title"
-    if (($candidateSource -and $candidateSource -eq $draftLeaf) -or ($candidateTitle -and $candidateTitle -eq $title)) {
-      if ($candidate.BaseName -match "^(\d{4}-\d{2}-\d{2})-") {
-        $datePrefix = $Matches[1]
-      }
-      $oldPostToRemove = $candidate
-      Write-Host "Found existing post with same source/title (old slug), replacing: $($candidate.Name)"
-      break
+    if (($candidateSource -and $candidateSource -eq $draftLeaf) -or (-not $candidateSource -and $candidateTitle -and $candidateTitle -eq $title)) {
+      $identityMatches += $candidate
     }
+  }
+  if ($identityMatches.Count -gt 1) {
+    throw "Multiple published posts match source '$draftLeaf'. Resolve the duplicate source/title metadata before publishing."
+  }
+  $oldPostToRemove = $identityMatches | Select-Object -First 1
+  if ($oldPostToRemove) {
+    if ($oldPostToRemove.BaseName -match "^(\d{4}-\d{2}-\d{2})-") {
+      $datePrefix = $Matches[1]
+    }
+    Write-Host "Found existing post with same source/title (old slug), replacing: $($oldPostToRemove.Name)"
   }
 }
 
@@ -292,6 +359,12 @@ if (-not $isMoments) {
 
 $assetDirRelative = "assets/images/posts/$datePrefix-$slug"
 $assetDir = Join-Path $root $assetDirRelative
+$previewPreservePaths = @()
+if ($NoCommit -and $NoPush -and (Test-Path -LiteralPath $assetDir)) {
+  $previewPreservePaths = Get-ChildItem -LiteralPath $assetDir -Recurse -File | ForEach-Object {
+    $_.FullName.Substring($root.Length).TrimStart('\', '/').Replace('\', '/')
+  }
+}
 New-Item -ItemType Directory -Force -Path $assetDir | Out-Null
 
 # When replacing a post whose slug changed, carry its assets forward so
@@ -331,13 +404,12 @@ if (-not [string]::IsNullOrWhiteSpace($CoverPath)) {
 
 $body = [regex]::Replace($body, '!\[\[([^\]]+)\]\]', {
   param($match)
-  $reference = ($match.Groups[1].Value -split '\|')[0]
+  $reference = (($match.Groups[1].Value -split '\|')[0] -split '#')[0]
   $source = Resolve-AttachmentPath -Reference $reference -DraftDirectory $draftDirectory -Root $root -VaultRoot $VaultRoot -AssetDir $assetDir
   if (-not $source) {
-    Write-Warning "Image not found: $reference"
-    return $match.Value
+    throw "Image not found: $reference"
   }
-  $name = Split-Path $source -Leaf
+  $name = [IO.Path]::ChangeExtension((Get-AssetFileName -Reference $reference), [IO.Path]::GetExtension($source))
   $dest = Join-Path $assetDir $name
   if ((Resolve-Path -LiteralPath $source).Path -ne (Resolve-Path -LiteralPath $dest -ErrorAction SilentlyContinue).Path) {
     Copy-Item -LiteralPath $source -Destination $dest -Force
@@ -348,16 +420,15 @@ $body = [regex]::Replace($body, '!\[\[([^\]]+)\]\]', {
 $body = [regex]::Replace($body, '!\[([^\]]*)\]\(([^)]+)\)', {
   param($match)
   $alt = $match.Groups[1].Value
-  $reference = $match.Groups[2].Value
-  if ($reference -match '^(https?:)?//|^\{\{') {
+  $reference = Get-MarkdownImageReference -Value $match.Groups[2].Value
+  if ($reference -match '^[A-Za-z][A-Za-z0-9+.-]*:|^//|^\{\{|^/') {
     return $match.Value
   }
   $source = Resolve-AttachmentPath -Reference $reference -DraftDirectory $draftDirectory -Root $root -VaultRoot $VaultRoot -AssetDir $assetDir
   if (-not $source) {
-    Write-Warning "Image not found: $reference"
-    return $match.Value
+    throw "Image not found: $reference"
   }
-  $name = Split-Path $source -Leaf
+  $name = [IO.Path]::ChangeExtension((Get-AssetFileName -Reference $reference), [IO.Path]::GetExtension($source))
   $dest = Join-Path $assetDir $name
   if ((Resolve-Path -LiteralPath $source).Path -ne (Resolve-Path -LiteralPath $dest -ErrorAction SilentlyContinue).Path) {
     Copy-Item -LiteralPath $source -Destination $dest -Force
@@ -368,6 +439,7 @@ $body = [regex]::Replace($body, '!\[([^\]]*)\]\(([^)]+)\)', {
 # --- Image compression ---
 try {
   $compressResult = & node scripts/compress-images.js --dir $assetDir 2>&1
+  Assert-NativeSuccess -Action "Image compression"
   $compressResult | ForEach-Object { Write-Host $_ }
 } catch {
   Write-Warning "图片压缩失败（文章仍会正常发布）：$($_.Exception.Message)"
@@ -412,9 +484,13 @@ $postPath = Join-Path $root $postRelative
 $published = "---`n$($yaml.Trim())`n---`n`n$body`n"
 Set-Content -LiteralPath $postPath -Value $published -Encoding UTF8
 
+$oldPostRelative = $null
+$oldAssetDirRelative = $null
 if ($oldPostToRemove -and $oldPostToRemove.FullName -ne $postPath) {
+  $oldPostRelative = "_posts/$($oldPostToRemove.Name)"
+  $oldAssetDirRelative = "assets/images/posts/$($oldPostToRemove.BaseName)"
   Remove-Item -LiteralPath $oldPostToRemove.FullName -Force
-  $oldAssetDir = Join-Path $root "assets/images/posts/$($oldPostToRemove.BaseName)"
+  $oldAssetDir = Join-Path $root $oldAssetDirRelative
   if ((Test-Path -LiteralPath $oldAssetDir) -and ($oldAssetDir -ne $assetDir)) {
     Remove-Item -LiteralPath $oldAssetDir -Recurse -Force
   }
@@ -425,32 +501,40 @@ $publishedDir = Join-Path $root "obsidian/Published"
 New-Item -ItemType Directory -Force -Path $publishedDir | Out-Null
 $publishedRelative = "obsidian/Published/$(Split-Path $draftFullPath -Leaf)"
 $publishedFullPath = Join-Path $root $publishedRelative
-if ((Resolve-Path -LiteralPath $draftFullPath).Path -ne (Resolve-Path -LiteralPath $publishedFullPath -ErrorAction SilentlyContinue).Path) {
-  Copy-Item -LiteralPath $draftFullPath -Destination $publishedFullPath -Force
-}
+$sourceBody = $front.Body.TrimStart()
+$sourcePublished = "---`n$($yaml.Trim())`n---`n`n$sourceBody`n"
+Set-Content -LiteralPath $publishedFullPath -Value $sourcePublished -Encoding UTF8
+
+$publishPaths = @($postRelative, $assetDirRelative, $publishedRelative)
+if ($oldPostRelative) { $publishPaths += $oldPostRelative }
+if ($oldAssetDirRelative) { $publishPaths += $oldAssetDirRelative }
 
 if ($NoCommit -and $NoPush) {
-  Write-PreviewManifest -Root $root -Paths @(
-    $postRelative,
-    $assetDirRelative,
-    $publishedRelative
-  )
+  Write-PreviewManifest -Root $root -Paths $publishPaths -PreservePaths $previewPreservePaths
 }
 
 # Build site (skip in preview mode for faster iteration)
 if (-not ($NoCommit -and $NoPush)) {
-  npm run build
+  & npm run build
+  Assert-NativeSuccess -Action "Site build"
+  & npm run test:unit
+  Assert-NativeSuccess -Action "Unit tests"
+  & npm run test:e2e
+  Assert-NativeSuccess -Action "End-to-end tests"
 }
 
 if (-not $NoCommit) {
-  git add _posts assets/images obsidian/Published
-  git add .
+  & git add -A -- @publishPaths
+  Assert-NativeSuccess -Action "Staging published files"
   $commitMessage = "post: $title"
-  $changes = git status --short
-  if ($changes) {
-    git commit -m $commitMessage
+  $stagedPaths = @(& git diff --cached --name-only -- @publishPaths)
+  Assert-NativeSuccess -Action "Checking published changes"
+  if ($stagedPaths.Count -gt 0) {
+    & git commit -m $commitMessage -- @stagedPaths
+    Assert-NativeSuccess -Action "Committing published files"
     if (-not $NoPush) {
-      git -c http.sslBackend=openssl push origin main
+      & git -c http.sslBackend=openssl push origin HEAD:main
+      Assert-NativeSuccess -Action "Pushing published files"
     }
   } else {
     Write-Host "No changes to commit."

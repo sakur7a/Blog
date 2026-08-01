@@ -22,6 +22,11 @@ function assetPathForPost(relativePostPath) {
   return `assets/images/posts/${fileName}`;
 }
 
+function isPathInside(parentPath, candidatePath) {
+  const relative = path.relative(path.resolve(parentPath), path.resolve(candidatePath));
+  return Boolean(relative) && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
 function splitFrontMatter(content) {
   const match = String(content).match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
   if (!match) return { yaml: "", body: content };
@@ -83,14 +88,13 @@ function replaceCover(root, postPath, coverPath, options = {}) {
     throw new Error(`Post has no front matter: ${relative}`);
   }
 
-  // Find and remove old cover file (only if inside the asset dir)
+  // Resolve the old cover only when it is a file inside this post's asset dir.
   const oldCover = readYamlValue(yaml, "cover");
+  let oldCoverAbsolute = "";
   if (oldCover) {
-    const oldCoverAbsolute = path.join(root, oldCover.replace(/^\//, ""));
-    const resolvedOld = path.resolve(oldCoverAbsolute);
-    const resolvedAsset = path.resolve(assetDir);
-    if (resolvedOld.startsWith(resolvedAsset) && fs.existsSync(resolvedOld)) {
-      fs.rmSync(oldCoverAbsolute);
+    const candidate = path.join(root, oldCover.replace(/^\//, ""));
+    if (isPathInside(assetDir, candidate) && fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      oldCoverAbsolute = candidate;
     }
   }
 
@@ -100,7 +104,7 @@ function replaceCover(root, postPath, coverPath, options = {}) {
   // Copy new cover
   const coverFileName = `cover${coverExtension}`;
   const coverDestRelative = `${assetRelative}/${coverFileName}`;
-  fs.copyFileSync(coverPath, path.join(root, coverDestRelative));
+  const coverDestAbsolute = path.join(root, coverDestRelative);
 
   // Update front matter
   let newYaml = setYamlValue(yaml, "cover", `"/${coverDestRelative}"`);
@@ -112,26 +116,50 @@ function replaceCover(root, postPath, coverPath, options = {}) {
     newYaml = setYamlValue(newYaml, "cover_position", '"50% 50%"');
   }
 
-  // Write post back
-  const newContent = `---\n${newYaml}\n---\n${body}`;
-  fs.writeFileSync(fullPath, newContent, "utf8");
-
-  // Build, test, commit, push
-  if (!options.skipBuild) {
-    run(root, "npm", ["run", "build"], { inherit: true, shell: true });
-    if (!options.skipTests) {
-      run(root, "npm", ["run", "test:e2e"], { inherit: true, shell: true });
+  // Keep exact backups until build/tests pass so a failed replacement cannot
+  // leave the article without its previous cover.
+  const fileBackups = new Map();
+  for (const filePath of [oldCoverAbsolute, coverDestAbsolute].filter(Boolean)) {
+    if (!fileBackups.has(filePath)) {
+      fileBackups.set(filePath, fs.existsSync(filePath) ? fs.readFileSync(filePath) : null);
     }
   }
 
+  const newContent = `---\n${newYaml}\n---\n${body}`;
+  try {
+    if (oldCoverAbsolute && oldCoverAbsolute !== coverDestAbsolute) {
+      fs.rmSync(oldCoverAbsolute);
+    }
+    fs.copyFileSync(coverPath, coverDestAbsolute);
+    fs.writeFileSync(fullPath, newContent, "utf8");
+
+    if (!options.skipBuild) {
+      run(root, "npm", ["run", "build"], { inherit: true, shell: true });
+      if (!options.skipTests) {
+        run(root, "npm", ["run", "test:e2e"], { inherit: true, shell: true });
+      }
+    }
+  } catch (error) {
+    fs.writeFileSync(fullPath, content, "utf8");
+    for (const [filePath, backup] of fileBackups) {
+      if (backup === null) {
+        fs.rmSync(filePath, { force: true });
+      } else {
+        fs.writeFileSync(filePath, backup);
+      }
+    }
+    throw error;
+  }
+
   if (!options.noCommit) {
-    run(root, "git", ["add", "_posts", "assets/images"], { inherit: true });
-    const status = spawnSync("git", ["status", "--short"], { cwd: root, encoding: "utf8", shell: false });
+    const publishPaths = [relative, assetRelative];
+    run(root, "git", ["add", "-A", "--", ...publishPaths], { inherit: true });
+    const status = spawnSync("git", ["status", "--short", "--", ...publishPaths], { cwd: root, encoding: "utf8", shell: false });
     if (status.stdout.trim()) {
       const postName = path.basename(relative, ".md");
-      run(root, "git", ["commit", "-m", `post: replace cover for ${postName}`], { inherit: true });
+      run(root, "git", ["commit", "-m", `post: replace cover for ${postName}`, "--", ...publishPaths], { inherit: true });
       if (!options.noPush) {
-        run(root, "git", ["-c", "http.sslBackend=openssl", "push", "origin", "main"], { inherit: true });
+        run(root, "git", ["-c", "http.sslBackend=openssl", "push", "origin", "HEAD:main"], { inherit: true });
       }
     }
   }

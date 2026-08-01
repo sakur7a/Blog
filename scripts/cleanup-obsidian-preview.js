@@ -32,18 +32,32 @@ function isTracked(root, relativePath) {
   return result.status === 0;
 }
 
-function restoreOrRemove(root, relativePath) {
-  const { fullPath, relative } = normalizeManifestPath(root, relativePath);
-  if (!fs.existsSync(fullPath)) return;
+function removeNewUntrackedFiles(root, relativePath, preservePaths) {
+  const result = runGit(root, ["ls-files", "--others", "--exclude-standard", "--", relativePath]);
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || `Failed to inspect ${relativePath}`);
+  }
 
+  for (const untracked of result.stdout.split(/\r?\n/).filter(Boolean)) {
+    const normalized = normalizeManifestPath(root, untracked);
+    if (!preservePaths.has(normalized.relative) && fs.existsSync(normalized.fullPath)) {
+      fs.rmSync(normalized.fullPath, { recursive: true, force: true });
+    }
+  }
+}
+
+function restoreOrRemove(root, relativePath, preservePaths = new Set()) {
+  const { fullPath, relative } = normalizeManifestPath(root, relativePath);
   if (isTracked(root, relative)) {
     const result = runGit(root, ["restore", "--", relative]);
     if (result.status !== 0) {
       throw new Error(result.stderr.trim() || `Failed to restore ${relative}`);
     }
+    removeNewUntrackedFiles(root, relative, preservePaths);
     return;
   }
 
+  if (!fs.existsSync(fullPath)) return;
   fs.rmSync(fullPath, { recursive: true, force: true });
 }
 
@@ -55,10 +69,15 @@ function cleanupPreview(root = path.resolve(__dirname, "..")) {
 
   const manifestContent = fs.readFileSync(manifestPath, "utf8").replace(/^\uFEFF/, "");
   const manifest = JSON.parse(manifestContent);
-  const paths = Array.from(new Set(manifest.paths || []));
+  const manifestPaths = Array.isArray(manifest.paths) ? manifest.paths : [manifest.paths].filter(Boolean);
+  const preserved = Array.isArray(manifest.preservePaths) ? manifest.preservePaths : [manifest.preservePaths].filter(Boolean);
+  const paths = Array.from(new Set(manifestPaths));
+  const preservePaths = new Set(
+    preserved.map((relativePath) => normalizeManifestPath(root, relativePath).relative)
+  );
 
   for (const relativePath of paths.sort((a, b) => b.length - a.length)) {
-    restoreOrRemove(root, relativePath);
+    restoreOrRemove(root, relativePath, preservePaths);
   }
 
   fs.rmSync(manifestPath, { force: true });

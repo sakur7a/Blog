@@ -69,12 +69,14 @@ function deletePost(root = path.resolve(__dirname, ".."), postPath, options = {}
     }
 
     if (!options.noCommit) {
-      run(root, "git", ["add", "_posts", "assets/images"], { inherit: true });
-      const status = spawnSync("git", ["status", "--short"], { cwd: root, encoding: "utf8", shell: false });
+      const publishPaths = [relative];
+      if (options.deleteAssets) publishPaths.push(assetRelative);
+      run(root, "git", ["add", "-A", "--", ...publishPaths], { inherit: true });
+      const status = spawnSync("git", ["status", "--short", "--", ...publishPaths], { cwd: root, encoding: "utf8", shell: false });
       if (status.stdout.trim()) {
-        run(root, "git", ["commit", "-m", `post: delete ${path.basename(relative, ".md")}`], { inherit: true });
+        run(root, "git", ["commit", "-m", `post: delete ${path.basename(relative, ".md")}`, "--", ...publishPaths], { inherit: true });
         if (!options.noPush) {
-          run(root, "git", ["-c", "http.sslBackend=openssl", "push", "origin", "main"], { inherit: true });
+          run(root, "git", ["-c", "http.sslBackend=openssl", "push", "origin", "HEAD:main"], { inherit: true });
         }
       }
     }
