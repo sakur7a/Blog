@@ -890,7 +890,7 @@ class PublishPostModal extends Modal {
 
     const coverSetting = new Setting(contentEl)
       .setName("选择封面图")
-      .setDesc("选择后可在下方调整封面显示区域；原图不会被压缩或拉伸。");
+      .setDesc("未选择新封面：重新发布将沿用已有封面；首次发布则不设置封面。选择后可在下方调整显示区域。");
     const coverInput = coverSetting.controlEl.createEl("input", {
       attr: {
         type: "file",
@@ -1361,7 +1361,8 @@ class ManageContentModal extends Modal {
     mcSummarySetting.settingEl.style.display = this.publishMeta.category === "moments" ? "none" : "";
 
     const coverSetting = new Setting(this.publishContainer)
-      .setName("封面图");
+      .setName("封面图")
+      .setDesc("未选择新封面：重新发布将沿用已有封面；首次发布则不设置封面。");
     const coverInput = coverSetting.controlEl.createEl("input", {
       attr: { type: "file", accept: "image/png,image/jpeg,image/webp,image/gif" }
     });

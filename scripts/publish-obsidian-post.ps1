@@ -109,6 +109,26 @@ function Resolve-AttachmentPath {
     }
   }
 
+  # Published source notes keep their original Obsidian references, while the
+  # first publish flattens attachments into this post's asset directory and
+  # compresses PNG/JPEG files to WebP. Reuse that exact post-scoped copy before
+  # falling back to a repository-wide filename search.
+  if ($AssetDir) {
+    $fileName = Split-Path $Reference -Leaf
+    $assetCandidate = Join-Path $AssetDir $fileName
+    if (Test-Path -LiteralPath $assetCandidate) {
+      return (Resolve-Path -LiteralPath $assetCandidate).Path
+    }
+
+    if ([IO.Path]::GetExtension($fileName) -match '^\.(?i:png|jpe?g)$') {
+      $webpName = [IO.Path]::GetFileNameWithoutExtension($fileName) + ".webp"
+      $webpCandidate = Join-Path $AssetDir $webpName
+      if (Test-Path -LiteralPath $webpCandidate) {
+        return (Resolve-Path -LiteralPath $webpCandidate).Path
+      }
+    }
+  }
+
   $fileName = Split-Path $Reference -Leaf
   $found = Get-ChildItem -Path (Join-Path $Root "assets/images/posts") -Recurse -File -Filter $fileName -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($found) {
@@ -215,6 +235,33 @@ if (-not $existing) {
       $oldPostToRemove = $candidate
       Write-Host "Found existing post with same source/title (old slug), replacing: $($candidate.Name)"
       break
+    }
+  }
+}
+
+# Once an article exists, its first published timestamp is authoritative.
+# DateOverride remains useful only when creating a new article.
+$matchedPost = if ($existing) { $existing } else { $oldPostToRemove }
+if ($matchedPost) {
+  $matchedFront = Get-FrontMatter -Content (Get-Content -Raw -Encoding UTF8 -LiteralPath $matchedPost.FullName)
+  $publishedDate = Get-YamlValue -Yaml $matchedFront.Raw -Key "date"
+  if (-not [string]::IsNullOrWhiteSpace($publishedDate)) {
+    $dateValue = $publishedDate
+    Write-Host "Preserving first published time: $dateValue"
+  }
+
+  # A source note does not necessarily contain the generated cover fields.
+  # Keep them when updating the same post so a re-publish cannot drop its cover.
+  if ($existing -and [string]::IsNullOrWhiteSpace((Get-YamlValue -Yaml $yaml -Key "cover"))) {
+    $publishedCover = Get-YamlValue -Yaml $matchedFront.Raw -Key "cover"
+    if ($publishedCover) {
+      $yaml = Set-YamlValue -Yaml $yaml -Key "cover" -Value ('"{0}"' -f $publishedCover)
+    }
+  }
+  if ($existing -and [string]::IsNullOrWhiteSpace((Get-YamlValue -Yaml $yaml -Key "cover_position"))) {
+    $publishedCoverPosition = Get-YamlValue -Yaml $matchedFront.Raw -Key "cover_position"
+    if ($publishedCoverPosition) {
+      $yaml = Set-YamlValue -Yaml $yaml -Key "cover_position" -Value ('"{0}"' -f $publishedCoverPosition)
     }
   }
 }

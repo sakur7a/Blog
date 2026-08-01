@@ -33,6 +33,7 @@ test("plugin supports choosing a cover image for publishing", () => {
   assert.equal(main.includes("调整封面显示区域"), true);
   assert.equal(main.includes("arrayBuffer()"), true);
   assert.equal(main.includes("file.path ||"), false);
+  assert.equal(main.includes("未选择新封面：重新发布将沿用已有封面；首次发布则不设置封面。"), true);
 });
 
 test("plugin exposes separate cover focus controls", () => {

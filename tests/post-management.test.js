@@ -25,13 +25,14 @@ test("lists posts with metadata and management paths", () => {
       "date: 2026-05-06 20:00:00 +0800",
       "categories: [学习]",
       'summary: "机器学习笔记"',
+      'source_file: "原始笔记.md"',
       "---",
       "",
       "正文"
     ].join("\n"),
     "utf8"
   );
-  fs.writeFileSync(path.join(root, "obsidian", "Published", "ML.md"), "source", "utf8");
+  fs.writeFileSync(path.join(root, "obsidian", "Published", "原始笔记.md"), "source", "utf8");
 
   const posts = listPosts(root, { baseUrl: "https://sakur7a.github.io", basePath: "/Blog" });
 
@@ -42,7 +43,7 @@ test("lists posts with metadata and management paths", () => {
   assert.equal(posts[0].summary, "机器学习笔记");
   assert.equal(posts[0].postPath, "_posts/2026-05-06-ml.md");
   assert.equal(posts[0].assetPath, "assets/images/posts/2026-05-06-ml");
-  assert.equal(posts[0].sourcePath, "obsidian/Published/ML.md");
+  assert.equal(posts[0].sourcePath, "obsidian/Published/原始笔记.md");
   assert.equal(posts[0].url, "https://sakur7a.github.io/Blog/2026-05-06/ml.html");
 });
 
