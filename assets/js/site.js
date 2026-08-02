@@ -217,7 +217,7 @@
 
   if (!content || !toc || !nav) return;
 
-  var headings = Array.prototype.slice.call(content.querySelectorAll("h2, h3, h4"));
+  var headings = Array.prototype.slice.call(content.querySelectorAll("h1:not(.post-title), h2, h3, h4"));
   if (!headings.length) return;
 
   function slugify(value, index) {
@@ -246,7 +246,9 @@
 
     var item = document.createElement("li");
     var tag = heading.tagName.toLowerCase();
-    if (tag === "h4") {
+    if (tag === "h1") {
+      item.className = "toc-level-1";
+    } else if (tag === "h4") {
       item.className = "toc-level-4";
     } else if (tag === "h3") {
       item.className = "toc-level-3";
