@@ -106,6 +106,24 @@ test("post toc highlights the section currently being read", async ({ page, isMo
   await expect(page.locator(".post-toc a.is-active", { hasText: "2.1 总体知识结构" })).toBeAttached();
 });
 
+test("post toc includes level-one sections without duplicating the post title", async ({ page }) => {
+  await page.goto("2026-07-15/decomposition.html");
+
+  const tocLabels = await page.locator(".post-toc a").allTextContents();
+  expect(tocLabels).toContain("一、背景");
+  expect(tocLabels).toContain("二、发展");
+  expect(tocLabels).not.toContain("图层分解：1. 从 qwen-image-layered 开始");
+});
+
+test("post body paragraphs use the same font size", async ({ page }) => {
+  await page.goto("2026-07-15/decomposition.html");
+
+  const fontSizes = await page.locator("#post-content > p").evaluateAll((paragraphs) =>
+    paragraphs.slice(0, 2).map((paragraph) => getComputedStyle(paragraph).fontSize)
+  );
+  expect(fontSizes).toEqual(["17px", "17px"]);
+});
+
 test("post toc sits to the right of the article body on wide screens", async ({ page, isMobile }) => {
   test.skip(isMobile, "mobile keeps the toc above the article for narrow screens");
   await page.setViewportSize({ width: 1600, height: 1000 });

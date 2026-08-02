@@ -453,10 +453,6 @@ body#post-index {
     padding: 32px 50px 70px;
     border-radius: 8px;
   }
-  #post .entry-content > p:first-of-type,
-  #page .entry-content > p:first-of-type {
-    font-size: 20px;
-  }
 }
 
 @media (min-width: 1000px) {
